@@ -336,7 +336,7 @@ export default function Timetable() {
     return palettes[index % palettes.length];
   };
 
-  // Fetch all data from Django backend
+  // Fetch all data from the API backend
   useEffect(() => {
     if (!user) return;
 

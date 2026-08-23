@@ -209,7 +209,7 @@ export default function LecturerMessages() {
       // Upload attachment if present
       if (attachmentFile) {
         setUploadingAttachment(true);
-        console.log("Attachment upload not yet implemented via Django API");
+        console.log("Attachment upload not yet implemented via platform API");
         attachmentName = attachmentFile.name;
         attachmentSize = attachmentFile.size;
         setUploadingAttachment(false);

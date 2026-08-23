@@ -111,7 +111,7 @@ export default function Announcements() {
   };
 
   const fetchComments = async (announcementId: string) => {
-    // Comments are not yet supported by the Django API; leave empty
+    // Comments are not yet supported by the API; leave empty
     setComments({ ...comments, [announcementId]: [] });
   };
 

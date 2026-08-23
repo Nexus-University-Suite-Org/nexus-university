@@ -204,7 +204,7 @@ export default function AcademicCalendar() {
                 ),
               )}
               <Button size="sm" variant="outline" onClick={handleSaveCalendar}>
-                Save Calendar to Firestore
+                Save Calendar Events
               </Button>
             </div>
             <div className="flex gap-2">

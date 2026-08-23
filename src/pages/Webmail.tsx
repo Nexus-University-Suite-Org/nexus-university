@@ -184,7 +184,7 @@ export default function Webmail() {
 
   const fetchUsers = async () => {
     // Users list will be handled by manual input in compose view
-    // In a full implementation, you would fetch from Django API
+    // In a full implementation, you would fetch from platform API
     setUsers([]);
   };
 

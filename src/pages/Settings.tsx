@@ -67,7 +67,7 @@ export default function Settings() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  // Fetch user settings from Django
+  // Fetch user settings from the API
   useEffect(() => {
     if (!user?.uid) return;
 

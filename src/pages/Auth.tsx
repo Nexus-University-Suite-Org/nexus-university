@@ -157,7 +157,7 @@ export default function Auth() {
     }
   }, [initialMode]);
 
-  // Fetch unique colleges and initial courses from Django API
+  // Fetch unique colleges and initial courses from platform API
   useEffect(() => {
     const fetchData = async () => {
       try {

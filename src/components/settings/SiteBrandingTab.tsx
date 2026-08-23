@@ -47,7 +47,7 @@ export function SiteBrandingTab({ canEdit }: SiteBrandingTabProps) {
       await saveSettings(form);
       toast({
         title: "Branding updated",
-        description: "Site branding was saved to Firebase.",
+        description: "Site branding was saved.",
       });
     } catch (error: any) {
       toast({
@@ -68,7 +68,7 @@ export function SiteBrandingTab({ canEdit }: SiteBrandingTabProps) {
           Site Branding
         </CardTitle>
         <CardDescription>
-          Customize your portal identity and keep it synced in Firestore.
+          Customize your portal identity. Branding settings sync with the platform API.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -118,7 +118,7 @@ export function AcademicCalendarTab() {
     [],
   );
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-  const [firestoreAssignments, setFirestoreAssignments] = useState<
+  const [remoteAssignments, setRemoteAssignments] = useState<
     Array<{
       id: string;
       title: string;
@@ -211,7 +211,7 @@ export function AcademicCalendarTab() {
               courses: courseMap[a.course_id],
             }));
 
-            setFirestoreAssignments(assignmentsWithInfo as any);
+            setRemoteAssignments(assignmentsWithInfo as any);
 
             // Fetch submission statuses
             try {
@@ -244,7 +244,7 @@ export function AcademicCalendarTab() {
             setDynamicAssignments(assignmentEvents);
           }
         } else {
-          setFirestoreAssignments([]);
+          setRemoteAssignments([]);
           setDynamicAssignments([]);
         }
       } catch (error) {
@@ -257,8 +257,8 @@ export function AcademicCalendarTab() {
     fetchAssignments();
   }, [user]);
 
-  // Convert Firestore assignments to assignment-card format for display
-  const displayAssignments: Assignment[] = firestoreAssignments.map((fAsg) => {
+  // Convert remote assignments to assignment-card format for display
+  const displayAssignments: Assignment[] = remoteAssignments.map((fAsg) => {
     const submissionStatus = submissionStatuses.get(fAsg.id) || "pending";
     return {
       id: fAsg.id,

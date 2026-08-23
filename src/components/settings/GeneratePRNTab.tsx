@@ -259,7 +259,7 @@ export function GeneratePRNTab() {
       )}-${Math.floor(100 + Math.random() * 900)}`;
       setTransactionId(txnId);
 
-      // TODO: Replace with Django backend API call when available
+      // TODO: Replace with platform backend API call when available
       // const response = await postBackend("/api/payments/momo/", { ... });
 
       // Show the payment waiting modal
@@ -288,7 +288,7 @@ export function GeneratePRNTab() {
     if (!transactionId) return;
 
     try {
-      // TODO: Replace with Django backend API call when available
+      // TODO: Replace with platform backend API call when available
       // const response = await getBackend(`/api/payments/status/${transactionId}/`);
 
       // Payment confirmed - update database
@@ -379,7 +379,7 @@ export function GeneratePRNTab() {
         Date.now() / 1000,
       )}-${Math.floor(100 + Math.random() * 900)}`;
 
-      // TODO: Replace with Django backend API call when available
+      // TODO: Replace with platform backend API call when available
       // await postBackend("/api/payments/", { ... });
 
       toast({
@@ -445,7 +445,7 @@ export function GeneratePRNTab() {
           return;
         }
 
-        // TODO: Replace with Django backend API call when available
+        // TODO: Replace with platform backend API call when available
         // const paymentRes = await postBackend("/api/payments/", { ... });
 
         toast({

@@ -1,1 +1,0 @@
-To temporarily bypass registrar validation, you can modify the signup to treat registrars like students. But first, let's ensure the auth settings are correct.

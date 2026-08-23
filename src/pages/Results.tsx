@@ -174,7 +174,7 @@ export default function Results() {
         const API_BASE_URL =
           import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-        // Fetch both exam and quiz results from Django
+        // Fetch both exam and quiz results from the API
         const resp = await fetch(
           `${API_BASE_URL}/api/students/${user.uid}/results/`
         );

@@ -180,7 +180,7 @@ export default function LecturerAnnouncements() {
         likes: [],
         comments: [],
       });
-      // Engagement data is not available in the current Django backend.
+      // Engagement data is not available in the current backend.
       // This placeholder allows the details panel to render safely.
     } catch (error) {
       console.error("Error fetching engagement details:", error);

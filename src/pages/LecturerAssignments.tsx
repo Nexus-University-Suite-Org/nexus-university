@@ -123,7 +123,7 @@ export default function LecturerAssignments() {
   });
   const [uploadingDocument, setUploadingDocument] = useState(false);
 
-  // Load assignments created by this lecturer from Firebase
+  // Load assignments created by this lecturer from the API
   useEffect(() => {
     const loadAssignments = async () => {
       if (!user) return;

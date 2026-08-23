@@ -93,7 +93,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   }, [settings]);
 
   const saveSettings = useCallback(async (_nextSettings: SiteSettings) => {
-    // TODO: implement via Django API when backend endpoint is available
+    // TODO: implement via platform API when backend endpoint is available
   }, []);
 
   const canEdit = false;

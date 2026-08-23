@@ -158,7 +158,7 @@ export default function StudentQuiz() {
         return;
       }
 
-      // Fetch actual questions from Django API
+      // Fetch actual questions from platform API
       try {
         const API_BASE_URL =
           import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -244,7 +244,7 @@ export default function StudentQuiz() {
       setQuizScore(totalScore);
       setTotalPoints(total);
 
-      // Submit to Django API
+      // Submit to platform API
       const API_BASE_URL =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
       const resp = await fetch(`${API_BASE_URL}/api/quizzes/submit/`, {
