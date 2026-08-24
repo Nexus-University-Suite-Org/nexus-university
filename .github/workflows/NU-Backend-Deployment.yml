@@ -1,0 +1,184 @@
+name: Deploy NU Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'NU-Backend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build backend
+        run: |
+          echo "=== Building NU Backend ==="
+          echo "Current directory: $(pwd)"
+          echo "Checking NU-Backend folder exists..."
+          ls -la NU-Backend/
+          echo ""
+          echo "=== Running Maven build ==="
+          cd NU-Backend
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+          echo ""
+          echo "=== Build successful ==="
+          echo "JAR file:"
+          ls -lh target/*.jar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          eval "$(ssh-agent -s)"
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          echo "${{ secrets.SSH_KEY }}" | base64 -d | ssh-add -
+          echo "=== Loaded SSH keys ==="
+          ssh-add -l
+
+      - name: Add host to known_hosts
+        run: |
+          echo "=== Scanning host keys for ${{ secrets.HOST }}:${{ secrets.PORT }} ==="
+          ssh-keyscan -H -p ${{ secrets.PORT }} -t rsa,ed25519,ecdsa ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+          echo "=== known_hosts content ==="
+          cat ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          echo "=== Testing SSH connection to ${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.PORT }} ==="
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} \
+            'echo "=== Connected successfully ===" && \
+             whoami && \
+             echo "Home directory: $HOME" && \
+             pwd && \
+             echo "=== Docker status ===" && \
+             docker --version && \
+             docker-compose --version && \
+             echo "=== Disk space ===" && \
+             df -h / && \
+             echo "=== Memory ===" && \
+             free -h'
+
+      - name: Deploy
+        id: deploy
+        run: |
+          echo "=== Starting deployment of NU Backend ==="
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} \
+            'set -e
+             echo "=== Step 1: Navigating to Nexus directory ==="
+             cd $HOME/Applications/Nexus
+             echo "Current directory: $(pwd)"
+             echo "Directory contents:"
+             ls -la
+
+             echo ""
+             echo "=== Step 2: Backing up .env file ==="
+             cp .env /tmp/.env.deployment
+             echo ".env backed up to /tmp/.env.deployment"
+
+             echo ""
+             echo "=== Step 3: Pulling latest code for nexus-university ==="
+             cd nexus-university
+             echo "Current directory: $(pwd)"
+             echo "Current commit: $(git log --oneline -1)"
+             echo "Fetching origin main..."
+             git fetch origin main
+             echo "Resetting to origin/main..."
+             git reset --hard origin/main
+             git clean -fd
+             echo "New commit: $(git log --oneline -1)"
+
+             echo ""
+             echo "=== Step 4: Restoring .env file ==="
+             cd ..
+             cp /tmp/.env.deployment .env
+             rm /tmp/.env.deployment
+             echo ".env restored"
+
+             echo ""
+             echo "=== Step 5: Building and starting NU Backend container ==="
+             echo "Docker containers before:"
+             docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+             echo ""
+             echo "Building and starting nu-backend (only this service, not others)..."
+             docker-compose up -d --no-deps --build nu-backend
+             echo ""
+             echo "Docker containers after:"
+             docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+             echo ""
+             echo "=== Step 6: Checking container logs ==="
+             sleep 5
+             echo "=== nu-backend logs (last 30 lines) ==="
+             docker logs nu-backend --tail 30 2>&1 || echo "No logs available yet"
+
+             echo ""
+             echo "=== Deployment complete ==="'
+
+      - name: Health check
+        if: steps.deploy.outputs.skipped != 'true'
+        run: |
+          echo "=== Waiting for container to start... ==="
+          sleep 10
+          echo "=== Checking if port 8082 is listening ==="
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} \
+            'echo "=== Container status ===" && \
+             docker ps -a --filter "name=nu-backend" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && \
+             echo "" && \
+             echo "=== Checking port 8082 ===" && \
+             (nc -z localhost 8082 && echo "Port 8082 is OPEN") || echo "Port 8082 is CLOSED" && \
+             echo "" && \
+             echo "=== Recent container logs ===" && \
+             docker logs nu-backend --tail 20 2>&1'
+
+      - name: Debug logs on failure
+        if: failure()
+        run: |
+          echo "=== DEPLOYMENT FAILED - Collecting debug info ==="
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} \
+            'echo "=== Docker container status ===" && \
+             docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" && \
+             echo "" && \
+             echo "=== nu-backend logs (last 50 lines) ===" && \
+             docker logs nu-backend --tail 50 2>&1 && \
+             echo "" && \
+             echo "=== docker-compose config ===" && \
+             cd $HOME/Applications/Nexus && docker-compose config && \
+             echo "" && \
+             echo "=== Disk space ===" && \
+             df -h && \
+             echo "" && \
+             echo "=== Recent system logs ===" && \
+             journalctl -u docker --no-pager -n 20 2>/dev/null || echo "No docker service logs"'
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "NU Backend deployment successful to ${{ secrets.HOST }}"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "NU Backend deployment failed to ${{ secrets.HOST }}"
