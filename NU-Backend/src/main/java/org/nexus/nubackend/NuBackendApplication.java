@@ -9,6 +9,10 @@ import io.github.cdimascio.dotenv.Dotenv;
 public class NuBackendApplication {
 
 
+
+
+
+    
     public static void main(String[] args) {
 
         Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();

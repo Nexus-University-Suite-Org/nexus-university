@@ -72,7 +72,7 @@ jobs:
              pwd && \
              echo "=== Docker status ===" && \
              docker --version && \
-             docker-compose --version && \
+             docker compose version && \
              echo "=== Disk space ===" && \
              df -h / && \
              echo "=== Memory ===" && \
@@ -121,7 +121,7 @@ jobs:
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
              echo ""
              echo "Building and starting nu-backend (only this service, not others)..."
-             docker-compose up -d --no-deps --build nu-backend
+             docker compose up -d --no-deps --build nu-backend
              echo ""
              echo "Docker containers after:"
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
@@ -164,8 +164,8 @@ jobs:
              echo "=== nu-backend logs (last 50 lines) ===" && \
              docker logs nu-backend --tail 50 2>&1 && \
              echo "" && \
-             echo "=== docker-compose config ===" && \
-             cd $HOME/Applications/Nexus && docker-compose config && \
+             echo "=== docker compose config ===" && \
+             cd $HOME/Applications/Nexus && docker compose config && \
              echo "" && \
              echo "=== Disk space ===" && \
              df -h && \
