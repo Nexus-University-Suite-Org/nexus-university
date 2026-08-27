@@ -190,7 +190,6 @@ export default function QuizView() {
           variant: "destructive",
         });
       }
-    }
   };
 
   const handleDuplicateQuiz = async () => {
