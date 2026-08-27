@@ -8,14 +8,7 @@ import {
   Bell,
   User,
   LogOut,
-  BookOpen,
   Settings,
-  Mail,
-  Calendar,
-  Zap,
-  Clipboard,
-  Megaphone,
-  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,19 +69,6 @@ export function StudentHeader() {
     };
   }, [user]);
 
-  const studentNavItems = [
-    { label: "Dashboard", href: "/dashboard", icon: Zap },
-    { label: "Programs", href: "/programs", icon: BookOpen },
-    { label: "Calendar", href: "/academic-calendar", icon: Calendar },
-    { label: "Announcements", href: "/announcements", icon: Megaphone },
-    { label: "Assignments", href: "/assignments", icon: Clipboard },
-    { label: "Quiz", href: "/quiz", icon: BookOpen },
-    { label: "Results", href: "/results", icon: Award },
-    { label: "Webmail", href: "/webmail", icon: Mail },
-    { label: "ID Card", href: "/id-card", icon: User },
-    { label: "Settings", href: "/settings", icon: Settings },
-  ];
-
   return (
     <motion.header
       initial={{ y: -100, opacity: 0 }}
@@ -125,21 +105,6 @@ export function StudentHeader() {
               </span>
             </Link>
           </div>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex gap-2">
-            {user &&
-              studentNavItems.map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.href}
-                  className="px-3 py-2 text-sm text-gray-600 hover:text-orange-600"
-                >
-                  <item.icon className="inline h-4 w-4 mr-1" />
-                  {item.label}
-                </Link>
-              ))}
-          </nav>
 
           {/* Right */}
           <div className="flex items-center gap-3">
