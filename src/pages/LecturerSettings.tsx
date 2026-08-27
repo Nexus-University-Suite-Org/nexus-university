@@ -275,11 +275,6 @@ export default function LecturerSettings() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This action is permanent and cannot be undone.",
-    );
-    if (!confirmed) return;
-
     setDeletingAccount(true);
     try {
       toast({

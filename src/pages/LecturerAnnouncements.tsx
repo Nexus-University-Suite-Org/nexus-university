@@ -190,8 +190,6 @@ export default function LecturerAnnouncements() {
   };
 
   const handleDeleteAnnouncement = async (announcementId: string) => {
-    if (!window.confirm("Are you sure you want to delete this announcement?"))
-      return;
     try {
       setDeletingId(announcementId);
       await deleteBackend(`/api/announcements/${announcementId}/`);

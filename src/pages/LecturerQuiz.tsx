@@ -245,8 +245,7 @@ export default function LecturerQuiz() {
   }, [quizzes, filterStatus, searchQuery]);
 
   const handleDeleteQuiz = async (quizId: string) => {
-    if (confirm("Are you sure you want to delete this quiz?")) {
-      try {
+    try {
         await postBackend(`/api/quizzes/${quizId}/action/`, { action: "delete" });
 
         toast({
@@ -262,8 +261,7 @@ export default function LecturerQuiz() {
           variant: "destructive",
         });
       }
-    }
-  };
+    };
 
   const handleDuplicateQuiz = async (quiz: Quiz) => {
     try {

@@ -315,8 +315,6 @@ export default function LecturerAssignments() {
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     if (!user) return;
-    const confirmed = window.confirm("Delete this assignment?");
-    if (!confirmed) return;
 
     try {
       await deleteBackend(`/api/assignments/${assignmentId}/`);

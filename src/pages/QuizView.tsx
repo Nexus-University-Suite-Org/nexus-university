@@ -175,8 +175,7 @@ export default function QuizView() {
   };
 
   const handleDeleteQuiz = async () => {
-    if (confirm("Are you sure you want to delete this quiz?")) {
-      try {
+    try {
         await postBackend(`/api/quizzes/${id}/action/`, { action: "delete" });
         toast({
           title: "Success",
@@ -191,7 +190,7 @@ export default function QuizView() {
           variant: "destructive",
         });
       }
-    }
+    };
   };
 
   const handleDuplicateQuiz = async () => {
