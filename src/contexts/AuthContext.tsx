@@ -36,31 +36,11 @@ interface Profile {
   updated_at?: any;
 }
 
-interface StudentRecord {
-  id: string;
-  full_name: string;
-  registration_number: string;
-  student_number: string;
-  email: string | null;
-  is_registered: boolean;
-}
-
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (
-    email: string,
-    password: string,
-    fullName: string,
-    registrationNumber?: string,
-    studentNumber?: string,
-    role?: "student" | "lecturer" | "admin" | "registrar",
-    department?: string,
-    college?: string,
-    programme?: string,
-  ) => Promise<{ error: Error | null; user?: User; profile?: Profile | null }>;
   signIn: (
     identifier: string,
     password: string,
@@ -70,11 +50,6 @@ interface AuthContextType {
     password: string,
   ) => Promise<{ error: Error | null; user?: User; profile?: Profile | null }>;
   signOut: () => Promise<void>;
-  validateStudent: (
-    registrationNumber: string,
-    studentNumber: string,
-    email: string,
-  ) => Promise<{ data: StudentRecord | null; error: Error | null }>;
   generateOTP: (
     email: string,
     studentRecordId: string | null,
@@ -106,6 +81,44 @@ function clearToken() {
   window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
 }
 
+const AUTH_USER_STORAGE_KEY = "nexus-auth-user";
+const AUTH_PROFILE_STORAGE_KEY = "nexus-auth-profile";
+
+function getStoredUser(): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_USER_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getStoredProfile(): Profile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(AUTH_PROFILE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Profile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(user: User, profile: Profile | null) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
+  window.localStorage.setItem(
+    AUTH_PROFILE_STORAGE_KEY,
+    JSON.stringify(profile),
+  );
+}
+
+function clearSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+  window.localStorage.removeItem(AUTH_PROFILE_STORAGE_KEY);
+}
+
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -113,7 +126,7 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
 
   const token = getToken();
   if (token) {
-    headers["Authorization"] = `Token ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -139,7 +152,7 @@ async function getJson<T>(path: string): Promise<T> {
 
   const token = getToken();
   if (token) {
-    headers["Authorization"] = `Token ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -171,45 +184,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      try {
-        const response = await getJson<{ user: User; profile: Profile | null }>(
-          "/api/auth/me/",
-        );
-
-        setUser(response.user);
-        setSession({ user: response.user });
-        setProfile(response.profile);
-      } catch (error) {
+      const storedUser = getStoredUser();
+      const storedProfile = getStoredProfile();
+      if (storedUser) {
+        setUser(storedUser);
+        setSession({ user: storedUser });
+        setProfile(storedProfile);
+      } else {
         clearToken();
-      } finally {
-        setLoading(false);
+        clearSession();
       }
+
+      setLoading(false);
     };
 
     initialize();
   }, []);
-
-  // Validate if student exists in the system, create if not
-  const validateStudent = async (
-    registrationNumber: string,
-    studentNumber: string,
-    email: string,
-  ): Promise<{ data: StudentRecord | null; error: Error | null }> => {
-    try {
-      const response = await postJson<StudentRecord>(
-        "/api/auth/validate-student-record/",
-        {
-          registrationNumber,
-          studentNumber,
-          email,
-        },
-      );
-
-      return { data: response, error: null };
-    } catch (error: any) {
-      return { data: null, error: new Error(error.message) };
-    }
-  };
 
   // Generate a 4-digit OTP
   const generateOTP = async (
@@ -218,19 +208,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<{ otp: string; error: Error | null }> => {
     try {
       const response = await postJson<{
-        success: boolean;
-        deliveryChannel: string;
-        otp?: string;
-        verificationId?: string;
-      }>("/api/auth/send-signup-otp/", {
+        ok: boolean;
+        message?: string;
+        emailSent?: boolean;
+        code?: string;
+        popup?: {
+          title: string;
+          code: string;
+          expiryMinutes: number;
+          instructions: string;
+        };
+      }>("/api/v1/auth/otp/send", {
         email,
-        studentRecordId,
       });
 
-      return {
-        otp: import.meta.env.DEV ? response.otp || "" : "",
-        error: null,
-      };
+      if (!response.ok) {
+        return { otp: "", error: new Error(response.message || "Failed to send OTP") };
+      }
+
+      const otp = response.popup?.code || response.code || "";
+      return { otp, error: null };
     } catch (error: any) {
       return { otp: "", error: new Error(error.message) };
     }
@@ -242,12 +239,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     otp: string,
   ): Promise<{ valid: boolean; error: Error | null }> => {
     try {
-      const response = await postJson<{ valid: boolean; reason?: string }>(
-        "/api/auth/verify-signup-otp/",
+      const response = await postJson<{ ok: boolean; verified?: boolean }>(
+        "/api/v1/auth/otp/verify",
         { email, otp },
       );
 
-      if (!response.valid) {
+      if (!response.ok || !response.verified) {
         return {
           valid: false,
           error: new Error("Invalid or expired OTP. Please request a new one."),
@@ -260,50 +257,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    fullName: string,
-    registrationNumber?: string,
-    studentNumber?: string,
-    role: "student" | "lecturer" | "admin" | "registrar" = "student",
-    department?: string,
-    college?: string,
-    programme?: string,
-  ): Promise<{
-    error: Error | null;
-    user?: User;
-    profile?: Profile | null;
-  }> => {
-    try {
-      const response = await postJson<{
-        token: string;
-        user: User;
-        profile: Profile | null;
-      }>("/api/auth/signup/", {
-        email,
-        password,
-        fullName,
-        registrationNumber,
-        studentNumber,
-        role,
-        department,
-        college,
-        programme,
-      });
+  interface NapStudentLoginResponse {
+    token: string;
+    user: {
+      id: number | string;
+      email: string;
+      fullName?: string;
+      role?: string;
+    };
+    profile: {
+      applicationId?: number | string;
+      prn?: string | null;
+      fullName?: string;
+      email?: string;
+      phoneNumber?: string | null;
+      programChoice1?: string | null;
+      programChoice2?: string | null;
+      programChoice3?: string | null;
+      programChoice4?: string | null;
+      assignedProgramme?: string | null;
+      status?: string | null;
+      studyMode?: string | null;
+      academicYear?: string | null;
+      startDate?: string | null;
+    };
+  }
 
-      saveToken(response.token);
-      setUser(response.user);
-      setSession({ user: response.user });
-      setProfile(response.profile);
-
-      return { error: null, user: response.user, profile: response.profile };
-    } catch (error: any) {
-      return { error: new Error(error.message) };
-    }
-  };
-
-  // Sign in with email or identifier and password
+  // Sign in with email and password against the Application Portal (NAP)
   const signIn = async (
     identifier: string,
     password: string,
@@ -313,21 +293,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile?: Profile | null;
   }> => {
     try {
-      const response = await postJson<{
-        token: string;
-        user: User;
-        profile: Profile | null;
-      }>("/api/auth/login/", {
-        identifier,
-        password,
-      });
+      const email = identifier.trim().toLowerCase();
+      const response = await postJson<NapStudentLoginResponse>(
+        "/api/v1/auth/student/login",
+        { email, password },
+      );
+
+      const user: User = {
+        uid: String(response.user.id ?? response.profile.applicationId ?? ""),
+        email: response.user.email ?? response.profile.email ?? email,
+        displayName:
+          response.user.fullName ??
+          response.profile.fullName ??
+          email.split("@")[0],
+      };
+
+      const profile: Profile = {
+        id: String(response.profile.applicationId ?? response.user.id ?? ""),
+        full_name: response.profile.fullName ?? user.displayName ?? "",
+        email: user.email,
+        avatar_url: null,
+        student_number: response.profile.prn ?? null,
+        registration_number: response.profile.prn ?? null,
+        department: response.profile.assignedProgramme ?? null,
+        college: null,
+        programme: response.profile.programChoice1 ?? null,
+        phone: response.profile.phoneNumber ?? null,
+        phone_number: response.profile.phoneNumber ?? null,
+        bio: null,
+        role: "student",
+      };
 
       saveToken(response.token);
-      setUser(response.user);
-      setSession({ user: response.user });
-      setProfile(response.profile);
+      saveSession(user, profile);
+      setUser(user);
+      setSession({ user });
+      setProfile(profile);
 
-      return { error: null, user: response.user, profile: response.profile };
+      return { error: null, user, profile };
     } catch (error: any) {
       return { error: new Error(error.message) };
     }
@@ -349,10 +352,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     newPassword: string,
   ): Promise<{ error: Error | null }> => {
     try {
-      await postJson<{ success: boolean }>("/api/auth/reset-password/", {
-        identifier,
-        newPassword,
-      });
+      const email = identifier.trim().toLowerCase();
+      await postJson<{ ok: boolean; message?: string }>(
+        "/api/v1/auth/student/reset-password",
+        { email, newPassword },
+      );
       return { error: null };
     } catch (error: any) {
       return { error: new Error(error.message) };
@@ -366,6 +370,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore logout errors - still clear local token
     }
     clearToken();
+    clearSession();
     setUser(null);
     setSession(null);
     setProfile(null);
@@ -378,11 +383,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         loading,
-        signUp,
         signIn,
         signInWithStudentId,
         signOut,
-        validateStudent,
         generateOTP,
         verifyOTP,
         resetPassword,

@@ -4,9 +4,9 @@ spring:
 
 
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    url: ${DATABASE_URL:jdbc:h2:mem:nudb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
+    username: ${DATABASE_USER:sa}
+    password: ${DATABASE_PASSWORD:}
 
   jpa:
     hibernate:
@@ -18,4 +18,4 @@ spring:
     open-in-view: false
 
   server:
-    port: 8081
+    port: 8082

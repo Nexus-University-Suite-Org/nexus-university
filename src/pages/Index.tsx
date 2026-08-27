@@ -165,19 +165,9 @@ export default function Index() {
                       asChild
                       className="bg-violet-600 text-white hover:bg-violet-700 text-md px-10 h-14 rounded-full transition-all duration-300 shadow-xl shadow-violet-100"
                     >
-                      <Link to="/auth?mode=signup">
+                      <Link to="/auth">
                         Get Started
                         <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      asChild
-                      className="border-violet-100 text-violet-700 hover:bg-violet-50 px-8 h-14 rounded-full shadow-sm"
-                    >
-                      <Link to="/auth" className="flex items-center gap-2">
-                        Student Login
                       </Link>
                     </Button>
                   </>

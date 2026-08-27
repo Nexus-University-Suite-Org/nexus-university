@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import OtpPopup from "@/components/OtpPopup";
 
 type ForgotPasswordStep = "identifier" | "otp" | "password" | "success";
 
@@ -41,6 +42,14 @@ export default function ForgotPassword() {
   });
 
   const [userEmail, setUserEmail] = useState("");
+  const [otpPopupOpen, setOtpPopupOpen] = useState(false);
+  const [otpPopupData, setOtpPopupData] = useState<{
+    otp: string;
+    email: string;
+    expiryMinutes: number;
+    title?: string;
+    instructions?: string;
+  } | null>(null);
 
   const { generateOTP, verifyOTP, resetPassword } = useAuth();
   const { toast } = useToast();
@@ -83,7 +92,15 @@ export default function ForgotPassword() {
 
       setGeneratedOtp(otp);
 
-      // Show OTP in toast for testing
+      if (otp) {
+        setOtpPopupData({
+          otp,
+          email: formData.identifier,
+          expiryMinutes: 10,
+        });
+        setOtpPopupOpen(true);
+      }
+
       toast({
         title: "OTP Sent",
         description: `Your verification code is: ${otp}`,
@@ -736,6 +753,18 @@ export default function ForgotPassword() {
           )}
         </motion.div>
       </div>
+
+      {otpPopupData && (
+        <OtpPopup
+          open={otpPopupOpen}
+          onOpenChange={setOtpPopupOpen}
+          otp={otpPopupData.otp}
+          email={otpPopupData.email}
+          expiryMinutes={otpPopupData.expiryMinutes}
+          title={otpPopupData.title}
+          instructions={otpPopupData.instructions}
+        />
+      )}
     </div>
   );
 }

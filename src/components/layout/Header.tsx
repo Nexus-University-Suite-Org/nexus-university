@@ -191,14 +191,11 @@ export function Header() {
             </>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild>
-                <Link to="/auth">Sign In</Link>
-              </Button>
               <Button
                 asChild
                 className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
               >
-                <Link to="/auth?mode=signup">Get Started</Link>
+                <Link to="/auth">Sign In</Link>
               </Button>
             </div>
           )}
