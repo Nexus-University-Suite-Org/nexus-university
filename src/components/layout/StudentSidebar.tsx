@@ -12,6 +12,7 @@ import {
   Mail,
   User,
   Settings,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,7 +37,8 @@ const studentNavItems = [
 
 export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   // Close sidebar when route changes
   useEffect(() => {
@@ -44,6 +46,11 @@ export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
   }, [location.pathname, onClose]);
 
   if (!user) return null;
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   return (
     <AnimatePresence>
@@ -109,6 +116,17 @@ export function StudentSidebar({ isOpen, onClose }: StudentSidebarProps) {
                   })}
                 </div>
               </nav>
+
+              {/* Logout */}
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 w-full"
+                >
+                  <LogOut className="h-5 w-5" />
+                  Sign out
+                </button>
+              </div>
             </div>
           </motion.div>
         </>
