@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bell,
-  User,
-  LogOut,
-  Menu,
-  X,
+  PanelLeftClose,
+  PanelLeftOpen,
   GraduationCap,
   Zap,
   BookOpen,
@@ -24,20 +21,18 @@ import {
   Target,
   CheckCircle,
   Calculator,
-  Layers,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { getBackend } from "@/lib/backendApi";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -87,20 +82,12 @@ const registrarNavItems = [
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const { user, profile, signOut } = useAuth();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const location = useLocation();
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   const getNavItems = () => {
     switch (profile?.role) {
@@ -128,7 +115,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (user?.uid) {
       const fetchUnreadCount = async () => {
         try {
-          const data = await getBackend<any[]>("/api/notifications/?user_id=" + user.uid);
+          const data = await getBackend<any[]>(
+            "/api/notifications/?user_id=" + user.uid,
+          );
           setUnreadCount(data.filter((n) => !n.is_read).length);
         } catch {
           // Silently fail
@@ -146,251 +135,269 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const navItems = getNavItems();
+  const sidebarWidth = collapsed ? "w-[68px]" : "w-64";
+
+  const SidebarNav = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <nav className="flex-1 overflow-y-auto p-3">
+      <div className="space-y-1">
+        {navItems.map((item, index) => {
+          const isActive = location.pathname === item.href;
+          const linkContent = (
+            <Link
+              to={item.href}
+              onClick={() => isMobile && setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
+                isActive
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              } ${collapsed ? "justify-center" : ""}`}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId={isMobile ? "mobile-active-tab" : "active-tab"}
+                  className="absolute inset-0 rounded-xl bg-primary/10"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                />
+              )}
+              <item.icon
+                className={`h-5 w-5 relative z-10 flex-shrink-0 transition-colors duration-200 ${
+                  isActive ? "text-primary" : ""
+                }`}
+              />
+              <AnimatePresence>
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="relative z-10 whitespace-nowrap overflow-hidden"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Link>
+          );
+
+          if (collapsed) {
+            return (
+              <Tooltip key={item.label} delayDuration={0}>
+                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          return (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.03 }}
+            >
+              {linkContent}
+            </motion.div>
+          );
+        })}
+      </div>
+    </nav>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar - Hidden on mobile, visible on desktop */}
-      <div className="hidden lg:block">
-        <div className="fixed left-0 top-0 z-40 h-full w-64 bg-card border-r border-border shadow-lg">
-          <div className="flex h-full flex-col">
-            {/* Logo */}
-            <div className="flex h-16 items-center justify-center border-b border-border px-4">
-              <Link to={profile?.role === "lecturer" ? "/lecturer" : profile?.role === "registrar" ? "/registrar" : "/dashboard"} className="flex items-center gap-2 group">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground transition-transform group-hover:scale-105 shadow-lg">
-                  {settings.logoUrl ? (
-                    <img
-                      src={settings.logoUrl}
-                      alt={`${settings.siteName} logo`}
-                      className="h-6 w-6 object-contain"
-                    />
-                  ) : (
-                    <GraduationCap className="h-6 w-6" />
-                  )}
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-lg font-bold text-foreground">
-                    {settings.shortName}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {getRoleLabel()}
-                  </span>
-                </div>
-              </Link>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-2">
-                {navItems.map((item, index) => {
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <motion.div
-                      key={item.label}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Link
-                        to={item.href}
-                        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/10 ${
-                          isActive
-                            ? "bg-primary/15 text-primary border-l-2 border-primary"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        {item.label}
-                      </Link>
-                    </motion.div>
-                  );
-                })}
+    <TooltipProvider delayDuration={0}>
+      <div className="min-h-screen bg-background">
+        {/* Desktop Sidebar */}
+        <motion.div
+          animate={{ width: collapsed ? 68 : 256 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="hidden lg:flex fixed left-0 top-0 z-40 h-full flex-col bg-card border-r border-border shadow-lg"
+        >
+          {/* Logo + Toggle */}
+          <div className="flex h-16 items-center border-b border-border px-3">
+            <Link
+              to={
+                profile?.role === "lecturer"
+                  ? "/lecturer"
+                  : profile?.role === "registrar"
+                    ? "/registrar"
+                    : "/dashboard"
+              }
+              className="flex items-center gap-2.5 group min-w-0"
+            >
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground transition-transform group-hover:scale-105 shadow-lg">
+                {settings.logoUrl ? (
+                  <img
+                    src={settings.logoUrl}
+                    alt={`${settings.siteName} logo`}
+                    className="h-6 w-6 object-contain"
+                  />
+                ) : (
+                  <GraduationCap className="h-6 w-6" />
+                )}
               </div>
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile sidebar overlay */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden">
-          <div className="fixed left-0 top-0 z-40 h-full w-64 bg-card border-r border-border shadow-lg">
-            <div className="flex h-full flex-col">
-              {/* Logo */}
-              <div className="flex h-16 items-center justify-center border-b border-border px-4">
-                <Link to={profile?.role === "lecturer" ? "/lecturer" : profile?.role === "registrar" ? "/registrar" : "/dashboard"} className="flex items-center gap-2 group">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground transition-transform group-hover:scale-105 shadow-lg">
-                    {settings.logoUrl ? (
-                      <img
-                        src={settings.logoUrl}
-                        alt={`${settings.siteName} logo`}
-                        className="h-6 w-6 object-contain"
-                      />
-                    ) : (
-                      <GraduationCap className="h-6 w-6" />
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-display text-lg font-bold text-foreground">
-                      {settings.shortName}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
+              <AnimatePresence>
+                {!collapsed && (
+                  <motion.div
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex flex-col overflow-hidden"
+                  >
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {getRoleLabel()}
                     </span>
-                  </div>
-                </Link>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Link>
 
-              {/* Navigation */}
-              <nav className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-2">
-                  {navItems.map((item, index) => {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <motion.div
-                        key={item.label}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <Link
-                          to={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-primary/10 ${
-                            isActive
-                              ? "bg-primary/15 text-primary border-l-2 border-primary"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <item.icon className="h-5 w-5" />
-                          {item.label}
-                        </Link>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </nav>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main content */}
-      <div className="lg:ml-64">
-        {/* Top header - Minimal on desktop, full on mobile */}
-        <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur-xl">
-          <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-            {/* Mobile menu button */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => setCollapsed(!collapsed)}
+              className="ml-auto h-8 w-8 flex-shrink-0 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <motion.div
+                animate={{ rotate: collapsed ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {collapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </motion.div>
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <SidebarNav />
+        </motion.div>
+
+        {/* Mobile sidebar overlay */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="lg:hidden"
             >
-              {mobileMenuOpen ? <X /> : <Menu />}
-            </Button>
-
-            {/* Spacer for mobile */}
-            <div className="lg:hidden" />
-
-            {/* Right side - User menu and notifications */}
-            <div className="flex items-center gap-2">
-              {user ? (
-                <>
-                  {/* Notifications */}
-                  <Button variant="ghost" size="icon" className="relative" asChild>
-                    <Link to="/notifications">
-                      <Bell className="h-5 w-5" />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-[10px] font-bold text-white flex items-center justify-center animate-pulse">
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  </Button>
-
-                  {/* User Menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="relative h-10 w-10 rounded-full"
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage
-                            src={profile?.avatar_url || ""}
-                            alt={profile?.full_name || user.email || ""}
+              <div className="fixed left-0 top-0 z-50 h-full w-64 bg-card border-r border-border shadow-xl">
+                <div className="flex h-full flex-col">
+                  {/* Logo */}
+                  <div className="flex h-16 items-center border-b border-border px-4">
+                    <Link
+                      to={
+                        profile?.role === "lecturer"
+                          ? "/lecturer"
+                          : profile?.role === "registrar"
+                            ? "/registrar"
+                            : "/dashboard"
+                      }
+                      className="flex items-center gap-2.5 group"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground transition-transform group-hover:scale-105 shadow-lg">
+                        {settings.logoUrl ? (
+                          <img
+                            src={settings.logoUrl}
+                            alt={`${settings.siteName} logo`}
+                            className="h-6 w-6 object-contain"
                           />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {profile?.full_name
-                              ? getInitials(profile.full_name)
-                              : user.email?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
-                      <div className="flex items-center gap-2 p-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {profile?.full_name
-                              ? getInitials(profile.full_name)
-                              : user.email?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col space-y-0.5">
-                          <p className="text-sm font-medium">
-                            {profile?.full_name || getRoleLabel()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {user.email}
-                          </p>
-                        </div>
+                        ) : (
+                          <GraduationCap className="h-6 w-6" />
+                        )}
                       </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link
-                          to={profile?.role === "lecturer" ? "/lecturer/settings" : profile?.role === "registrar" ? "/registrar/settings" : "/settings"}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
-                          <User className="h-4 w-4" />
-                          Settings
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={handleSignOut}
-                        className="text-destructive focus:text-destructive cursor-pointer"
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">
+                          {getRoleLabel()}
+                        </span>
+                      </div>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="ml-auto h-8 w-8"
+                    >
+                      <span className="sr-only">Close menu</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign out
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" asChild>
-                    <Link to="/auth">Sign In</Link>
-                  </Button>
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                      </svg>
+                    </Button>
+                  </div>
+
+                  {/* Navigation */}
+                  <SidebarNav isMobile />
                 </div>
-              )}
-            </div>
-          </div>
-        </header>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Page content */}
-        <main className="flex-1">
+        {/* Main content */}
+        <motion.main
+          animate={{ marginLeft: collapsed ? 68 : 256 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="hidden lg:block min-h-screen"
+        >
           {children}
-        </main>
-      </div>
+        </motion.main>
 
-      {/* Mobile overlay backdrop */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-    </div>
+        {/* Mobile content */}
+        <div className="lg:hidden min-h-screen">{children}</div>
+
+        {/* Mobile overlay backdrop */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Mobile bottom bar - only on mobile */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/80 backdrop-blur-xl border-t border-border">
+          <div className="flex items-center justify-around py-2 px-4">
+            {navItems.slice(0, 5).map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.label}
+                  to={item.href}
+                  className={`flex flex-col items-center gap-0.5 p-2 rounded-lg transition-colors ${
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span className="text-[10px] font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
   );
 }

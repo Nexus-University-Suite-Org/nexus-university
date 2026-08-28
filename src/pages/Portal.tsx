@@ -29,7 +29,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Header } from "@/components/layout/Header";
+
 import { BottomNav } from "@/components/layout/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBackend } from "@/lib/backendApi";
@@ -361,8 +361,6 @@ export default function Portal() {
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
-      <Header />
-
       <main className="container py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

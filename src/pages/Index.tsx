@@ -19,7 +19,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useRef } from "react";
 
@@ -103,7 +103,6 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
 
       {/* Hero Section */}
       <section

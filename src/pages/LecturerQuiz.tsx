@@ -261,7 +261,6 @@ export default function LecturerQuiz() {
           variant: "destructive",
         });
       }
-    }
   };
 
   const handleDuplicateQuiz = async (quiz: Quiz) => {
