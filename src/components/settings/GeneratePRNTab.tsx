@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postNuBackend } from "@/lib/backendApi";
 
 interface GeneratedPRN {
   id?: string;
@@ -154,7 +154,7 @@ export function GeneratePRNTab() {
       setLoading(true);
       if (!user) return;
       const data = await getBackend<any[]>(
-        `/api/student-fees/?student_id=${user.uid}`,
+        `/api/v1/student-fees?studentId=${user.uid}`,
       );
 
       // Sort by due_date descending
@@ -419,8 +419,8 @@ export function GeneratePRNTab() {
     try {
       const parsedAmount = parseFloat(amount);
 
-      // Call backend to generate PRN
-      const res = await postBackend<{ id: number; prnCode: string; amount: number; purpose: string; expiresAt: string }>(
+      // Call NU-Backend to generate PRN
+      const res = await postNuBackend<{ id: number; prnCode: string; amount: number; purpose: string; expiresAt: string }>(
         "/api/v1/payments/prn/generate",
         {
           studentId: user?.uid || "",

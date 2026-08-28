@@ -1,6 +1,9 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
+const NU_API_BASE_URL =
+  import.meta.env.VITE_NU_API_BASE_URL || "http://localhost:8082";
+
 const AUTH_TOKEN_KEY = "nexus-auth-token";
 
 function getToken(): string | null {
@@ -57,6 +60,34 @@ export async function deleteBackend<T>(path: string, auth: boolean = false): Pro
       "Content-Type": "application/json",
       ...(auth ? authHeaders() : {}),
     },
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+// NU-Backend (port 8082) helpers for payments, OTP, etc.
+export async function getNuBackend<T>(path: string, auth: boolean = false): Promise<T> {
+  const response = await fetch(`${NU_API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? authHeaders() : {}),
+    },
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+export async function postNuBackend<T>(
+  path: string,
+  payload: unknown,
+  auth: boolean = false,
+): Promise<T> {
+  const response = await fetch(`${NU_API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? authHeaders() : {}),
+    },
+    body: JSON.stringify(payload),
   });
   return handleResponse(response) as Promise<T>;
 }
