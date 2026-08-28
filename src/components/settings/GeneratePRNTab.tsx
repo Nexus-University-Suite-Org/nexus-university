@@ -22,9 +22,6 @@ import {
   Eye,
   X,
   Smartphone,
-  Banknote,
-  Building2,
-  Globe,
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -110,7 +107,7 @@ export function GeneratePRNTab() {
       name: "Mobile Money",
       desc: "MTN MoMo, Airtel Money",
       color: "from-emerald-500 to-teal-500",
-      icon: Smartphone,
+      images: ["/images/payments/mtn-momo.png", "/images/payments/airtel-money.png"],
       instant: true,
       timing: "Instant",
     },
@@ -119,7 +116,7 @@ export function GeneratePRNTab() {
       name: "Bank Transfer",
       desc: "All major banks",
       color: "from-primary to-primary/70",
-      icon: Banknote,
+      images: ["/images/payments/bank-transfer.svg"],
       instant: false,
       timing: "Same-day",
     },
@@ -128,7 +125,7 @@ export function GeneratePRNTab() {
       name: "Bank Branch",
       desc: "Cash deposit",
       color: "from-amber-500 to-orange-500",
-      icon: Building2,
+      images: ["/images/payments/bank-branch.svg"],
       instant: false,
       timing: "Same-day",
     },
@@ -137,7 +134,7 @@ export function GeneratePRNTab() {
       name: "Online Portal",
       desc: "Visa/Mastercard",
       color: "from-secondary to-secondary/70",
-      icon: Globe,
+      images: ["/images/payments/visa.svg", "/images/payments/mastercard.svg"],
       instant: true,
       timing: "Instant",
     },
@@ -1143,7 +1140,6 @@ export function GeneratePRNTab() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {paymentMethods.map((method, i) => {
-                  const Icon = method.icon;
                   return (
                     <motion.div
                       key={method.name}
@@ -1156,7 +1152,15 @@ export function GeneratePRNTab() {
                         <div
                           className={`h-12 w-12 rounded-xl bg-gradient-to-br ${method.color} flex items-center justify-center shadow-lg`}
                         >
-                          <Icon className="h-6 w-6 text-white" />
+                          {method.images.length > 1 ? (
+                            <div className="flex gap-0.5">
+                              {method.images.map((img, idx) => (
+                                <img key={idx} src={img} alt="" className="h-5 w-auto object-contain" />
+                              ))}
+                            </div>
+                          ) : (
+                            <img src={method.images[0]} alt={method.name} className="h-6 w-auto object-contain" />
+                          )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -1519,9 +1523,7 @@ export function GeneratePRNTab() {
                         className="mb-6"
                       >
                         <div className="h-24 w-24 rounded-3xl bg-white shadow-2xl flex items-center justify-center">
-                          <span className="text-5xl font-black text-yellow-600">
-                            M
-                          </span>
+                          <img src="/images/payments/mtn-momo.png" alt="MTN MoMo" className="h-16 w-auto object-contain" />
                         </div>
                       </motion.div>
 
@@ -1567,9 +1569,7 @@ export function GeneratePRNTab() {
                         className="mb-6"
                       >
                         <div className="h-24 w-24 rounded-3xl bg-white shadow-2xl flex items-center justify-center">
-                          <span className="text-5xl font-black text-red-600">
-                            A
-                          </span>
+                          <img src="/images/payments/airtel-money.png" alt="Airtel Money" className="h-16 w-auto object-contain" />
                         </div>
                       </motion.div>
 
