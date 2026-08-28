@@ -24,6 +24,7 @@ import {
   Smartphone,
   Wallet,
   Building2,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,6 +117,15 @@ export function GeneratePRNTab() {
   const [showBankBranch, setShowBankBranch] = useState(false);
   const [selectedBank, setSelectedBank] = useState<BankInfo | null>(null);
   const [bankDepositConfirmed, setBankDepositConfirmed] = useState(false);
+  const [bankPaymentMode, setBankPaymentMode] = useState<"cash" | "card">("cash");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCVV, setCardCVV] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [processingCardPayment, setProcessingCardPayment] = useState(false);
+  const [showPrnDetail, setShowPrnDetail] = useState(false);
+  const [selectedPrn, setSelectedPrn] = useState<GeneratedPRN | null>(null);
+  const prnDetailRef = useRef<HTMLDivElement>(null);
 
   const paymentMethods = [
     {
@@ -485,6 +495,134 @@ export function GeneratePRNTab() {
     } finally {
       setVerifyingPin(false);
     }
+  };
+
+  const handleCardPayment = async () => {
+    if (!generatedPRN || !selectedBank) return;
+
+    if (!cardName || !cardNumber || !cardExpiry || !cardCVV) {
+      toast({
+        title: "Missing Card Details",
+        description: "Please fill in all card details",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (cardNumber.replace(/\s/g, "").length < 16) {
+      toast({
+        title: "Invalid Card Number",
+        description: "Please enter a valid 16-digit card number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingCardPayment(true);
+
+    try {
+      const txnId = `CARD-${selectedBank.id}-${Math.floor(Date.now() / 1000)}-${Math.floor(100 + Math.random() * 900)}`;
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      toast({
+        title: "Payment Processed",
+        description: `UGX ${generatedPRN.amount.toLocaleString()} charged to your ${selectedBank.shortName} card ending in ${cardNumber.slice(-4)}`,
+      });
+
+      setCardNumber("");
+      setCardExpiry("");
+      setCardCVV("");
+      setCardName("");
+      setShowBankBranch(false);
+      setSelectedBank(null);
+      setBankPaymentMode("cash");
+      setBankDepositConfirmed(false);
+      await fetchFees();
+    } catch (error: any) {
+      console.error("Card payment error:", error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Card payment failed. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingCardPayment(false);
+    }
+  };
+
+  const openPrnDetail = (prn: GeneratedPRN) => {
+    setSelectedPrn(prn);
+    setShowPrnDetail(true);
+  };
+
+  const downloadPrnImage = async () => {
+    if (!prnDetailRef.current) return;
+
+    try {
+      const canvas = await html2canvas(prnDetailRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+      });
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = `PRN-${selectedPrn?.code}-details.png`;
+      link.click();
+      toast({ title: "Downloaded", description: "PRN details saved as image" });
+    } catch (error) {
+      console.error("Error downloading PRN image:", error);
+      toast({ title: "Error", description: "Failed to download image", variant: "destructive" });
+    }
+  };
+
+  const printPrnDetail = () => {
+    if (!prnDetailRef.current) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>PRN ${selectedPrn?.code}</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a1a; }
+        .header { text-align: center; border-bottom: 2px dashed #10b981; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h1 { color: #10b981; margin: 0; font-size: 24px; }
+        .header p { color: #666; margin: 4px 0 0; }
+        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .label { color: #6b7280; font-weight: 500; }
+        .value { font-weight: 600; text-align: right; }
+        .amount { font-size: 28px; color: #10b981; font-weight: 800; text-align: center; padding: 16px; background: #f0fdf4; border-radius: 12px; margin: 16px 0; }
+        .prn-code { font-size: 20px; font-family: monospace; color: #059669; text-align: center; padding: 12px; background: #f0fdf4; border-radius: 8px; margin: 8px 0; letter-spacing: 2px; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-active { background: #dbeafe; color: #1d4ed8; }
+        .status-expired { background: #fee2e2; color: #dc2626; }
+        .status-paid { background: #d1fae5; color: #059669; }
+        .footer { text-align: center; margin-top: 24px; padding-top: 16px; border-top: 2px dashed #e5e7eb; color: #9ca3af; font-size: 12px; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+      <div class="header">
+        <h1>PAYMENT REFERENCE NUMBER</h1>
+        <p>Nexus University Payment System</p>
+      </div>
+      <div class="amount">UGX ${selectedPrn?.amount.toLocaleString()}</div>
+      <div class="prn-code">${selectedPrn?.code}</div>
+      <div style="text-align:center;margin:8px 0 16px">
+        <span class="status ${selectedPrn?.status === 'paid' ? 'status-paid' : (selectedPrn && selectedPrn.expiresAt <= new Date() ? 'status-expired' : 'status-active')}">
+          ${selectedPrn?.status === 'paid' ? 'Paid' : (selectedPrn && selectedPrn.expiresAt <= new Date() ? 'Expired' : 'Active')}
+        </span>
+      </div>
+      <div class="row"><span class="label">Purpose</span><span class="value">${selectedPrn?.purpose}</span></div>
+      <div class="row"><span class="label">Student</span><span class="value">${profile?.full_name || 'N/A'}</span></div>
+      <div class="row"><span class="label">Student Number</span><span class="value">${profile?.student_number || 'N/A'}</span></div>
+      <div class="row"><span class="label">Generated</span><span class="value">${selectedPrn?.generatedAt.toLocaleString()}</span></div>
+      <div class="row"><span class="label">Expires</span><span class="value">${selectedPrn?.expiresAt.toLocaleString()}</span></div>
+      <div class="footer">
+        <p>Generated by Nexus University Payment System</p>
+        <p>PRN ID: ${selectedPrn?.id || selectedPrn?.code}</p>
+      </div>
+      <script>window.onload=function(){window.print();}</script>
+      </body></html>
+    `);
+    printWindow.document.close();
   };
 
   const handlePaymentMethod = async (methodKey: string) => {
@@ -1279,21 +1417,32 @@ export function GeneratePRNTab() {
                                     minute: "2-digit",
                                   })}
                                 </span>
-                                {!isPaid && (
-                                  <span
-                                    className={
-                                      isExpired
-                                        ? "text-red-500"
-                                        : hoursLeft <= 12
-                                          ? "text-amber-600 font-semibold"
-                                          : ""
-                                    }
+                                <div className="flex items-center gap-3">
+                                  {!isPaid && (
+                                    <span
+                                      className={
+                                        isExpired
+                                          ? "text-red-500"
+                                          : hoursLeft <= 12
+                                            ? "text-amber-600 font-semibold"
+                                            : ""
+                                      }
+                                    >
+                                      {isExpired
+                                        ? "Expired"
+                                        : `${hoursLeft}h remaining`}
+                                    </span>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openPrnDetail(prn)}
+                                    className="h-7 px-2 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                   >
-                                    {isExpired
-                                      ? "Expired"
-                                      : `${hoursLeft}h remaining`}
-                                  </span>
-                                )}
+                                    <Eye className="h-3 w-3" />
+                                    View
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </motion.div>
@@ -2352,6 +2501,11 @@ export function GeneratePRNTab() {
                 onClick={() => {
                   setSelectedBank(null);
                   setBankDepositConfirmed(false);
+                  setBankPaymentMode("cash");
+                  setCardNumber("");
+                  setCardExpiry("");
+                  setCardCVV("");
+                  setCardName("");
                 }}
                 className="gap-2"
               >
@@ -2367,20 +2521,57 @@ export function GeneratePRNTab() {
                     className="h-full w-auto object-contain"
                   />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-lg">{selectedBank.name}</h3>
                   <p className="text-sm text-muted-foreground">
                     {selectedBank.branch}
                   </p>
                 </div>
+                {selectedBank.cardTypes.length > 0 && (
+                  <div className="flex gap-1">
+                    {selectedBank.cardTypes.map((ct) => (
+                      <Badge key={ct} variant="secondary" className="text-xs">
+                        {ct}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Payment Mode Tabs */}
+              {selectedBank.cardTypes.length > 0 && (
+                <div className="flex rounded-xl bg-muted p-1 gap-1">
+                  <button
+                    onClick={() => setBankPaymentMode("cash")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      bankPaymentMode === "cash"
+                        ? "bg-card shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Cash Deposit
+                  </button>
+                  <button
+                    onClick={() => setBankPaymentMode("card")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      bankPaymentMode === "card"
+                        ? "bg-card shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Online Card Payment
+                  </button>
+                </div>
+              )}
 
               {/* PRN Amount */}
               {generatedPRN && (
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-muted-foreground">
-                      Amount to Deposit
+                      Amount to {bankPaymentMode === "cash" ? "Deposit" : "Pay"}
                     </span>
                     <span className="text-2xl font-black">
                       UGX {generatedPRN.amount.toLocaleString()}
@@ -2395,73 +2586,332 @@ export function GeneratePRNTab() {
                 </div>
               )}
 
-              {/* Account Details */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
-                  Deposit To These Account Details
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { label: "Account Number", value: selectedBank.accountNumber },
-                    { label: "Account Name", value: selectedBank.accountName },
-                    { label: "SWIFT Code", value: selectedBank.swiftCode },
-                    { label: "Branch", value: selectedBank.branch },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="p-3 rounded-xl bg-muted/50 border border-border"
+              {bankPaymentMode === "cash" ? (
+                /* Cash Deposit Details */
+                <>
+                  {/* Account Details */}
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
+                      Deposit To These Account Details
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { label: "Account Number", value: selectedBank.accountNumber },
+                        { label: "Account Name", value: selectedBank.accountName },
+                        { label: "SWIFT Code", value: selectedBank.swiftCode },
+                        { label: "Branch", value: selectedBank.branch },
+                      ].map((item) => (
+                        <div
+                          key={item.label}
+                          className="p-3 rounded-xl bg-muted/50 border border-border"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {item.label}
+                          </p>
+                          <p className="font-mono font-semibold text-sm">
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div className="space-y-2">
+                        <p className="font-bold text-amber-900 text-sm">
+                          Important Instructions
+                        </p>
+                        <ul className="text-xs text-amber-800 space-y-1 list-disc list-inside">
+                          <li>
+                            Write the PRN code <strong>{generatedPRN?.code}</strong> on
+                            your deposit slip
+                          </li>
+                          <li>Deposit the exact amount shown above</li>
+                          <li>Keep your deposit receipt for reference</li>
+                          <li>
+                            Payment will be reflected within 24 hours after deposit
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Confirmation Checkbox */}
+                  <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
+                    <input
+                      type="checkbox"
+                      id="bank-deposit-confirm"
+                      checked={bankDepositConfirmed}
+                      onChange={(e) => setBankDepositConfirmed(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                    />
+                    <label
+                      htmlFor="bank-deposit-confirm"
+                      className="text-sm text-muted-foreground cursor-pointer"
                     >
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {item.label}
-                      </p>
-                      <p className="font-mono font-semibold text-sm">
-                        {item.value}
-                      </p>
+                      I have noted the account details and PRN code, and I will
+                      deposit the exact amount at my nearest {selectedBank.name}{" "}
+                      branch
+                    </label>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedBank(null);
+                        setBankDepositConfirmed(false);
+                        setBankPaymentMode("cash");
+                      }}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      disabled={!bankDepositConfirmed}
+                      onClick={() => {
+                        toast({
+                          title: "Deposit Instructions Saved",
+                          description: `Deposit UGX ${generatedPRN?.amount.toLocaleString()} at ${selectedBank.name} using PRN ${generatedPRN?.code}`,
+                        });
+                        setShowBankBranch(false);
+                        setSelectedBank(null);
+                        setBankDepositConfirmed(false);
+                        setBankPaymentMode("cash");
+                      }}
+                      className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Confirm Deposit
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                /* Online Card Payment Form */
+                <>
+                  {/* Card Brand Icons */}
+                  <div className="flex items-center justify-center gap-4 py-2">
+                    {selectedBank.cardTypes.map((ct) => (
+                      <div key={ct} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border">
+                        <img
+                          src={ct === "Visa" ? "/images/payments/visa.svg" : "/images/payments/mastercard.svg"}
+                          alt={ct}
+                          className="h-5 w-auto"
+                        />
+                        <span className="text-xs font-medium">{ct}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Card Form */}
+                  <div className="space-y-4 p-5 rounded-2xl border border-border bg-card">
+                    {/* Cardholder Name */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Cardholder Name</Label>
+                      <Input
+                        type="text"
+                        placeholder="John Doe"
+                        value={cardName}
+                        onChange={(e) => setCardName(e.target.value)}
+                        className="h-11 rounded-xl"
+                      />
+                    </div>
+
+                    {/* Card Number */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Card Number</Label>
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          placeholder="1234 5678 9012 3456"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+                            const formatted = v.replace(/(.{4})/g, "$1 ").trim();
+                            setCardNumber(formatted);
+                          }}
+                          maxLength={19}
+                          className="h-11 rounded-xl pl-11 font-mono"
+                        />
+                        <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+
+                    {/* Expiry & CVV */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Expiry Date</Label>
+                        <Input
+                          type="text"
+                          placeholder="MM/YY"
+                          value={cardExpiry}
+                          onChange={(e) => {
+                            let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                            if (v.length >= 3) v = v.slice(0, 2) + "/" + v.slice(2);
+                            setCardExpiry(v);
+                          }}
+                          maxLength={5}
+                          className="h-11 rounded-xl font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">CVV</Label>
+                        <Input
+                          type="password"
+                          placeholder="•••"
+                          value={cardCVV}
+                          onChange={(e) => setCardCVV(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          maxLength={4}
+                          className="h-11 rounded-xl font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security Notice */}
+                  <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <Shield className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-emerald-700">
+                      Your card details are encrypted and processed securely. We never store your full card number.
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setBankPaymentMode("cash");
+                        setCardNumber("");
+                        setCardExpiry("");
+                        setCardCVV("");
+                        setCardName("");
+                      }}
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      disabled={processingCardPayment || !cardName || cardNumber.replace(/\s/g, "").length < 16 || !cardExpiry || cardCVV.length < 3}
+                      onClick={handleCardPayment}
+                      className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                    >
+                      {processingCardPayment ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Pay UGX {generatedPRN?.amount.toLocaleString()}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* PRN Detail Modal */}
+      <Dialog open={showPrnDetail} onOpenChange={setShowPrnDetail}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              PRN Transaction Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedPrn && (
+            <div className="space-y-4">
+              <div ref={prnDetailRef} className="space-y-4 p-6 rounded-2xl bg-white text-black border-2 border-emerald-500">
+                {/* Header */}
+                <div className="text-center border-b-2 border-dashed border-gray-300 pb-4">
+                  <h2 className="text-xl font-bold text-emerald-700">
+                    PAYMENT REFERENCE NUMBER
+                  </h2>
+                  <p className="text-xs text-gray-500">Nexus University Payment System</p>
+                </div>
+
+                {/* PRN Code */}
+                <div className="text-center py-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">PRN Code</p>
+                  <p className="font-mono text-xl font-black text-emerald-700 tracking-wider">
+                    {selectedPrn.code}
+                  </p>
+                </div>
+
+                {/* Status */}
+                <div className="text-center">
+                  {(() => {
+                    const now = new Date();
+                    const isExpired = selectedPrn.expiresAt <= now;
+                    const isPaid = selectedPrn.status === "paid";
+                    const label = isPaid ? "Paid" : isExpired ? "Expired" : "Active";
+                    const cls = isPaid
+                      ? "bg-emerald-100 text-emerald-700"
+                      : isExpired
+                        ? "bg-red-100 text-red-700"
+                        : "bg-blue-100 text-blue-700";
+                    return (
+                      <span className={`inline-block px-4 py-1 rounded-full text-xs font-bold ${cls}`}>
+                        {label}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                {/* Amount */}
+                <div className="text-center py-3">
+                  <p className="text-xs text-gray-500 mb-1">Amount</p>
+                  <p className="text-3xl font-black text-gray-900">
+                    UGX {selectedPrn.amount.toLocaleString()}
+                  </p>
+                </div>
+
+                {/* Details Grid */}
+                <div className="space-y-2 text-sm">
+                  {[
+                    { label: "Purpose", value: selectedPrn.purpose },
+                    { label: "Student", value: profile?.full_name || "N/A" },
+                    { label: "Student Number", value: profile?.student_number || "N/A" },
+                    { label: "Email", value: profile?.email || "N/A" },
+                    { label: "Generated", value: selectedPrn.generatedAt.toLocaleString() },
+                    { label: "Expires", value: selectedPrn.expiresAt.toLocaleString() },
+                  ].map((item) => (
+                    <div key={item.label} className="flex justify-between py-1.5 border-b border-gray-200 last:border-0">
+                      <span className="text-gray-500">{item.label}</span>
+                      <span className="font-medium text-gray-900 text-right">{item.value}</span>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              {/* Instructions */}
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div className="space-y-2">
-                    <p className="font-bold text-amber-900 text-sm">
-                      Important Instructions
-                    </p>
-                    <ul className="text-xs text-amber-800 space-y-1 list-disc list-inside">
-                      <li>
-                        Write the PRN code <strong>{generatedPRN?.code}</strong> on
-                        your deposit slip
-                      </li>
-                      <li>Deposit the exact amount shown above</li>
-                      <li>Keep your deposit receipt for reference</li>
-                      <li>
-                        Payment will be reflected within 24 hours after deposit
-                      </li>
-                    </ul>
+                {/* QR Code */}
+                <div className="flex justify-center py-3 border-t-2 border-dashed border-gray-300">
+                  <div className="bg-white p-2 rounded-lg border border-gray-300">
+                    <QRCodeSVG
+                      value={selectedPrn.code}
+                      size={100}
+                      level="H"
+                      includeMargin={true}
+                      fgColor="#000000"
+                      bgColor="#ffffff"
+                    />
                   </div>
                 </div>
-              </div>
 
-              {/* Confirmation Checkbox */}
-              <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
-                <input
-                  type="checkbox"
-                  id="bank-deposit-confirm"
-                  checked={bankDepositConfirmed}
-                  onChange={(e) => setBankDepositConfirmed(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                />
-                <label
-                  htmlFor="bank-deposit-confirm"
-                  className="text-sm text-muted-foreground cursor-pointer"
-                >
-                  I have noted the account details and PRN code, and I will
-                  deposit the exact amount at my nearest {selectedBank.name}{" "}
-                  branch
-                </label>
+                {/* Footer */}
+                <div className="text-center text-xs text-gray-400 border-t border-gray-200 pt-3">
+                  Receipt ID: {selectedPrn.id || selectedPrn.code}
+                </div>
               </div>
 
               {/* Action Buttons */}
@@ -2469,28 +2919,27 @@ export function GeneratePRNTab() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setSelectedBank(null);
-                    setBankDepositConfirmed(false);
+                    setShowPrnDetail(false);
+                    setSelectedPrn(null);
                   }}
                   className="flex-1"
                 >
-                  Cancel
+                  Close
                 </Button>
                 <Button
-                  disabled={!bankDepositConfirmed}
-                  onClick={() => {
-                    toast({
-                      title: "Deposit Instructions Saved",
-                      description: `Deposit UGX ${generatedPRN?.amount.toLocaleString()} at ${selectedBank.name} using PRN ${generatedPRN?.code}`,
-                    });
-                    setShowBankBranch(false);
-                    setSelectedBank(null);
-                    setBankDepositConfirmed(false);
-                  }}
-                  className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                  variant="outline"
+                  onClick={printPrnDetail}
+                  className="flex-1 gap-2"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Confirm Deposit
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+                <Button
+                  onClick={downloadPrnImage}
+                  className="flex-1 gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
                 </Button>
               </div>
             </div>
