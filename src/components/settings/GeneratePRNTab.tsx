@@ -1437,7 +1437,7 @@ export function GeneratePRNTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => openPrnDetail(prn)}
-                                    className="h-7 px-2 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-7 px-2 text-xs gap-1"
                                   >
                                     <Eye className="h-3 w-3" />
                                     View
