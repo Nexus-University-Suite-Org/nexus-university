@@ -417,73 +417,45 @@ export function GeneratePRNTab() {
     setIsGenerating(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const timestamp = Date.now().toString(36).toUpperCase();
-      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const prefix = purpose.substring(0, 3).toUpperCase();
-      const prnCode = `PRN-${prefix}-${timestamp}-${random}`;
       const parsedAmount = parseFloat(amount);
 
-      // If a fee is selected, create a payment record
-      let paymentId: string | undefined;
-      if (selectedFeeId && user?.uid) {
-        const selectedFee = fees.find((f) => f.id === selectedFeeId);
-        if (!selectedFee) {
-          throw new Error("Fee not found");
+      // Call backend to generate PRN
+      const res = await postBackend<{ id: number; prnCode: string; amount: number; purpose: string; expiresAt: string }>(
+        "/api/v1/payments/prn/generate",
+        {
+          studentId: user?.uid || "",
+          feeId: selectedFeeId ? Number(selectedFeeId) : null,
+          amount: parsedAmount,
+          purpose,
         }
-
-        // Check if payment amount exceeds remaining balance
-        const remainingBalance = selectedFee.amount - selectedFee.paid_amount;
-        if (parsedAmount > remainingBalance) {
-          toast({
-            title: "Invalid Amount",
-            description: `Amount exceeds remaining balance (UGX ${remainingBalance.toLocaleString()})`,
-            variant: "destructive",
-          });
-          setIsGenerating(false);
-          return;
-        }
-
-        // TODO: Replace with platform backend API call when available
-        // const paymentRes = await postBackend("/api/payments/", { ... });
-
-        toast({
-          title: "Payment Recorded Successfully",
-          description: `Payment of UGX ${parsedAmount.toLocaleString()} has been recorded and your fees updated`,
-        });
-      } else {
-        // If no fee selected, just create the PRN reference
-        toast({
-          title: "PRN Generated Successfully",
-          description: "Your payment reference number is ready",
-        });
-      }
+      );
 
       const purposeLabel =
         purposes.find((p) => p.value === purpose)?.label || purpose;
 
       const newPRN: GeneratedPRN = {
-        id: paymentId,
-        code: prnCode,
-        amount: parsedAmount,
+        id: String(res.id),
+        code: res.prnCode,
+        amount: res.amount,
         purpose: purposeLabel,
         generatedAt: new Date(),
-        expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+        expiresAt: new Date(res.expiresAt),
         fee_id: selectedFeeId,
-        status: "completed",
+        status: "pending",
       };
 
       setGeneratedPRN(newPRN);
       setRecentPRNs((prev) => [newPRN, ...prev.slice(0, 4)]);
 
+      toast({
+        title: "PRN Generated Successfully",
+        description: `PRN ${res.prnCode} is ready. Pay within 48 hours.`,
+      });
+
       // Reset form
       setAmount("");
       setPurpose("");
       setSelectedFeeId("");
-
-      // Refresh fees to show updated paid amounts
-      await fetchFees();
     } catch (error) {
       console.error("Error generating PRN:", error);
       toast({
