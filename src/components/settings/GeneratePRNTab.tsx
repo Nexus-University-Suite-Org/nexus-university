@@ -23,6 +23,7 @@ import {
   X,
   Smartphone,
   Wallet,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postNuBackend } from "@/lib/backendApi";
+import { getBackend, getNuBackend, postNuBackend } from "@/lib/backendApi";
 
 interface GeneratedPRN {
   id?: string;
@@ -71,6 +72,18 @@ interface Fee {
   due_date: string;
   semester: string;
   description: string;
+}
+
+interface BankInfo {
+  id: string;
+  name: string;
+  shortName: string;
+  logo: string;
+  swiftCode: string;
+  accountNumber: string;
+  accountName: string;
+  branch: string;
+  cardTypes: string[];
 }
 
 export function GeneratePRNTab() {
@@ -100,6 +113,9 @@ export function GeneratePRNTab() {
   const [smsSid, setSmsSid] = useState("");
   const [transactionId, setTransactionId] = useState("");
   const [paymentChecking, setPaymentChecking] = useState(false);
+  const [showBankBranch, setShowBankBranch] = useState(false);
+  const [selectedBank, setSelectedBank] = useState<BankInfo | null>(null);
+  const [bankDepositConfirmed, setBankDepositConfirmed] = useState(false);
 
   const paymentMethods = [
     {
@@ -140,9 +156,123 @@ export function GeneratePRNTab() {
     },
   ];
 
+  const banks: BankInfo[] = [
+    {
+      id: "stanbic",
+      name: "Stanbic Bank Uganda",
+      shortName: "Stanbic",
+      logo: "/images/payments/banks/stanbic.png",
+      swiftCode: "SBICUGKX",
+      accountNumber: "9030000123456",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala Road",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "absa",
+      name: "Absa Bank Uganda",
+      shortName: "Absa",
+      logo: "/images/payments/banks/absa.png",
+      swiftCode: "ABCOUGKX",
+      accountNumber: "6001234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala Road",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "centenary",
+      name: "Centenary Bank",
+      shortName: "Centenary",
+      logo: "/images/payments/banks/centenary.png",
+      swiftCode: "CERBUGKA",
+      accountNumber: "1001234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa"],
+    },
+    {
+      id: "stanchart",
+      name: "Standard Chartered Bank",
+      shortName: "StanChart",
+      logo: "/images/payments/banks/standard-chartered.png",
+      swiftCode: "SCBLUGKA",
+      accountNumber: "0100123456789",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala Road",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "dfcu",
+      name: "dfcu Bank",
+      shortName: "dfcu",
+      logo: "/images/payments/banks/dfcu.png",
+      swiftCode: "DFCOUGKA",
+      accountNumber: "0101234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa"],
+    },
+    {
+      id: "equity",
+      name: "Equity Bank Uganda",
+      shortName: "Equity",
+      logo: "/images/payments/banks/equity.png",
+      swiftCode: "EQBLUGKA",
+      accountNumber: "1001234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "kcb",
+      name: "KCB Bank Uganda",
+      shortName: "KCB",
+      logo: "/images/payments/banks/kcb.png",
+      swiftCode: "KCBLUGKA",
+      accountNumber: "1001234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "ncba",
+      name: "NCBA Bank Uganda",
+      shortName: "NCBA",
+      logo: "/images/payments/banks/ncba.png",
+      swiftCode: "ABCOUGKX",
+      accountNumber: "1001234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "boa",
+      name: "Bank of Africa Uganda",
+      shortName: "BOA",
+      logo: "/images/payments/banks/bank-of-africa.png",
+      swiftCode: "AFRIUGKA",
+      accountNumber: "0101234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+    {
+      id: "uba",
+      name: "United Bank for Africa",
+      shortName: "UBA",
+      logo: "/images/payments/banks/uba.png",
+      swiftCode: "UNAFUGKA",
+      accountNumber: "1001234567890",
+      accountName: "Nexus University",
+      branch: "Main Branch - Kampala",
+      cardTypes: ["Visa", "Mastercard"],
+    },
+  ];
+
   useEffect(() => {
     if (user) {
       fetchFees();
+      fetchRecentPRNs();
     }
   }, [user]);
 
@@ -168,6 +298,27 @@ export function GeneratePRNTab() {
       console.error("Error fetching fees:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRecentPRNs = async () => {
+    try {
+      if (!user) return;
+      const data = await getNuBackend<{ id: number; prnCode: string; amount: number; purpose: string; createdAt: string; expiresAt: string; status: string }[]>(
+        `/api/v1/payments/prn/${user.uid}`,
+      );
+      const mapped: GeneratedPRN[] = data.map((p) => ({
+        id: String(p.id),
+        code: p.prnCode,
+        amount: p.amount,
+        purpose: p.purpose,
+        generatedAt: new Date(p.createdAt),
+        expiresAt: new Date(p.expiresAt),
+        status: p.status,
+      }));
+      setRecentPRNs(mapped.slice(0, 5));
+    } catch (error) {
+      console.error("Error fetching recent PRNs:", error);
     }
   };
 
@@ -360,6 +511,12 @@ export function GeneratePRNTab() {
     // Special handling for mobile money - show provider selection
     if (methodKey === "mobile-money") {
       setShowMoMoProvider(true);
+      return;
+    }
+
+    // Special handling for bank branch - show bank selection modal
+    if (methodKey === "bank-branch") {
+      setShowBankBranch(true);
       return;
     }
 
@@ -1047,48 +1204,101 @@ export function GeneratePRNTab() {
                     <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-secondary via-accent to-transparent" />
 
                     <div className="space-y-4">
-                      {recentPRNs.map((prn, i) => (
-                        <motion.div
-                          key={prn.code}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.1 }}
-                          className="relative flex items-center gap-4 pl-12"
-                        >
-                          {/* Timeline Dot */}
-                          <div className="absolute left-4 h-4 w-4 rounded-full bg-secondary shadow-lg shadow-secondary/50" />
+                      {recentPRNs.map((prn, i) => {
+                        const now = new Date();
+                        const isExpired = prn.expiresAt <= now;
+                        const isPaid = prn.status === "paid";
+                        const hoursLeft = isExpired
+                          ? 0
+                          : Math.round(
+                              (prn.expiresAt.getTime() - now.getTime()) /
+                                (1000 * 60 * 60),
+                            );
+                        const dotColor = isPaid
+                          ? "bg-emerald-500 shadow-emerald-500/50"
+                          : isExpired
+                            ? "bg-red-400 shadow-red-400/50"
+                            : hoursLeft <= 12
+                              ? "bg-amber-500 shadow-amber-500/50"
+                              : "bg-secondary shadow-secondary/50";
+                        const statusLabel = isPaid
+                          ? "Paid"
+                          : isExpired
+                            ? "Expired"
+                            : hoursLeft <= 12
+                              ? "Expiring Soon"
+                              : "Active";
+                        const statusColor = isPaid
+                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                          : isExpired
+                            ? "bg-red-500/10 text-red-600 border-red-200"
+                            : hoursLeft <= 12
+                              ? "bg-amber-500/10 text-amber-600 border-amber-200"
+                              : "bg-secondary/10 text-secondary border-secondary/20";
 
-                          <div className="flex-1 p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-colors border border-border/50 group">
-                            <div className="flex items-center justify-between">
-                              <div>
+                        return (
+                          <motion.div
+                            key={prn.code}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="relative flex items-start gap-4 pl-12"
+                          >
+                            {/* Timeline Dot */}
+                            <div
+                              className={`absolute left-4 h-4 w-4 rounded-full shadow-lg ${dotColor}`}
+                            />
+
+                            <div className="flex-1 p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-colors border border-border/50 group">
+                              <div className="flex items-center justify-between mb-2">
                                 <p className="font-mono font-bold text-sm">
                                   {prn.code}
                                 </p>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${statusColor}`}
+                                >
+                                  {statusLabel}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between mb-2">
                                 <p className="text-xs text-muted-foreground">
                                   {prn.purpose}
                                 </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold">
+                                <p className="font-bold text-sm">
                                   UGX {prn.amount.toLocaleString()}
                                 </p>
-                                <Badge
-                                  variant={
-                                    prn.expiresAt > new Date()
-                                      ? "default"
-                                      : "secondary"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {prn.expiresAt > new Date()
-                                    ? "Active"
-                                    : "Expired"}
-                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>
+                                  {prn.generatedAt.toLocaleDateString("en-UG", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                                {!isPaid && (
+                                  <span
+                                    className={
+                                      isExpired
+                                        ? "text-red-500"
+                                        : hoursLeft <= 12
+                                          ? "text-amber-600 font-semibold"
+                                          : ""
+                                    }
+                                  >
+                                    {isExpired
+                                      ? "Expired"
+                                      : `${hoursLeft}h remaining`}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      ))}
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>
@@ -2077,6 +2287,214 @@ export function GeneratePRNTab() {
               <div className="h-6" />
             </div>
           </motion.div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bank Branch Modal */}
+      <Dialog open={showBankBranch} onOpenChange={setShowBankBranch}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Bank Branch Deposit
+            </DialogTitle>
+            <DialogDescription>
+              Select your bank and deposit the PRN amount at any branch
+            </DialogDescription>
+          </DialogHeader>
+
+          {!selectedBank ? (
+            /* Bank Selection Grid */
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Choose your bank to view deposit details:
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {banks.map((bank, i) => (
+                  <motion.div
+                    key={bank.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    whileHover={{ scale: 1.03, y: -3 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelectedBank(bank)}
+                    className="cursor-pointer group"
+                  >
+                    <Card className="relative overflow-hidden border-2 border-border hover:border-primary/50 transition-all shadow-sm hover:shadow-lg">
+                      <CardContent className="p-4 flex flex-col items-center gap-3">
+                        <div className="h-16 w-16 rounded-xl bg-white border border-border flex items-center justify-center p-2 shadow-sm group-hover:shadow-md transition-shadow">
+                          <img
+                            src={bank.logo}
+                            alt={bank.name}
+                            className="h-full w-auto object-contain"
+                          />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-sm">{bank.shortName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {bank.cardTypes.join(" / ")}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Deposit Details */
+            <div className="space-y-6">
+              {/* Back Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedBank(null);
+                  setBankDepositConfirmed(false);
+                }}
+                className="gap-2"
+              >
+                ← Back to banks
+              </Button>
+
+              {/* Bank Info Header */}
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 border border-border">
+                <div className="h-14 w-14 rounded-xl bg-white border border-border flex items-center justify-center p-2">
+                  <img
+                    src={selectedBank.logo}
+                    alt={selectedBank.name}
+                    className="h-full w-auto object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{selectedBank.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedBank.branch}
+                  </p>
+                </div>
+              </div>
+
+              {/* PRN Amount */}
+              {generatedPRN && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Amount to Deposit
+                    </span>
+                    <span className="text-2xl font-black">
+                      UGX {generatedPRN.amount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm text-muted-foreground">PRN Code</span>
+                    <span className="font-mono font-bold text-primary">
+                      {generatedPRN.code}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Account Details */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
+                  Deposit To These Account Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { label: "Account Number", value: selectedBank.accountNumber },
+                    { label: "Account Name", value: selectedBank.accountName },
+                    { label: "SWIFT Code", value: selectedBank.swiftCode },
+                    { label: "Branch", value: selectedBank.branch },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="p-3 rounded-xl bg-muted/50 border border-border"
+                    >
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {item.label}
+                      </p>
+                      <p className="font-mono font-semibold text-sm">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <p className="font-bold text-amber-900 text-sm">
+                      Important Instructions
+                    </p>
+                    <ul className="text-xs text-amber-800 space-y-1 list-disc list-inside">
+                      <li>
+                        Write the PRN code <strong>{generatedPRN?.code}</strong> on
+                        your deposit slip
+                      </li>
+                      <li>Deposit the exact amount shown above</li>
+                      <li>Keep your deposit receipt for reference</li>
+                      <li>
+                        Payment will be reflected within 24 hours after deposit
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation Checkbox */}
+              <div className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/30">
+                <input
+                  type="checkbox"
+                  id="bank-deposit-confirm"
+                  checked={bankDepositConfirmed}
+                  onChange={(e) => setBankDepositConfirmed(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                />
+                <label
+                  htmlFor="bank-deposit-confirm"
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  I have noted the account details and PRN code, and I will
+                  deposit the exact amount at my nearest {selectedBank.name}{" "}
+                  branch
+                </label>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedBank(null);
+                    setBankDepositConfirmed(false);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={!bankDepositConfirmed}
+                  onClick={() => {
+                    toast({
+                      title: "Deposit Instructions Saved",
+                      description: `Deposit UGX ${generatedPRN?.amount.toLocaleString()} at ${selectedBank.name} using PRN ${generatedPRN?.code}`,
+                    });
+                    setShowBankBranch(false);
+                    setSelectedBank(null);
+                    setBankDepositConfirmed(false);
+                  }}
+                  className="flex-1 bg-gradient-to-r from-primary to-primary/80"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirm Deposit
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
