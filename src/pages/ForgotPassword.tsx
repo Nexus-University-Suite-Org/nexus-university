@@ -83,28 +83,15 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      // In a real app, you'd validate the identifier/email exists
       setUserEmail(formData.identifier);
 
-      // Generate OTP
-      const { otp, error } = await generateOTP(formData.identifier, "");
+      const { error } = await generateOTP(formData.identifier, "");
       if (error) throw error;
-
-      setGeneratedOtp(otp);
-
-      if (otp) {
-        setOtpPopupData({
-          otp,
-          email: formData.identifier,
-          expiryMinutes: 10,
-        });
-        setOtpPopupOpen(true);
-      }
 
       toast({
         title: "OTP Sent",
-        description: `Your verification code is: ${otp}`,
-        duration: 10000,
+        description: `A verification code has been sent to ${formData.identifier}`,
+        duration: 5000,
       });
 
       setStep("otp");
@@ -357,12 +344,25 @@ export default function ForgotPassword() {
               Didn't receive the code?{" "}
               <button
                 type="button"
-                onClick={() => {
-                  toast({
-                    title: "OTP Resent",
-                    description: `Your verification code is: ${generatedOtp}`,
-                    duration: 10000,
-                  });
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const { error } = await generateOTP(formData.identifier, "");
+                    if (error) throw error;
+                    toast({
+                      title: "OTP Resent",
+                      description: `A new verification code has been sent to ${formData.identifier}`,
+                      duration: 5000,
+                    });
+                  } catch (error: any) {
+                    toast({
+                      title: "Error",
+                      description: error.message || "Failed to resend OTP",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
                 className="text-secondary font-medium hover:text-secondary/80 transition-colors"
               >

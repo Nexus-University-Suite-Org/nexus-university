@@ -2,7 +2,6 @@ spring:
   application:
     name: NU-Backend
 
-
   datasource:
     url: ${DATABASE_URL:jdbc:h2:mem:nudb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
     username: ${DATABASE_USER:sa}
@@ -17,5 +16,17 @@ spring:
 
     open-in-view: false
 
-  server:
-    port: 8082
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8082

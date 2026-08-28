@@ -8,6 +8,8 @@ import {
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const SPRING_API_URL =
+  import.meta.env.VITE_SPRING_API_URL || "http://localhost:8082";
 const AUTH_TOKEN_STORAGE_KEY = "nexus-auth-token";
 
 interface User {
@@ -207,27 +209,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     studentRecordId: string | null,
   ): Promise<{ otp: string; error: Error | null }> => {
     try {
-      const response = await postJson<{
-        ok: boolean;
-        message?: string;
-        emailSent?: boolean;
-        code?: string;
-        popup?: {
-          title: string;
-          code: string;
-          expiryMinutes: number;
-          instructions: string;
-        };
-      }>("/api/v1/auth/otp/send", {
-        email,
+      const response = await fetch(`${SPRING_API_URL}/api/v1/auth/otp/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) {
-        return { otp: "", error: new Error(response.message || "Failed to send OTP") };
+      const data = await response.json();
+      if (!data.ok) {
+        return { otp: "", error: new Error(data.message || "Failed to send OTP") };
       }
 
-      const otp = response.popup?.code || response.code || "";
-      return { otp, error: null };
+      return { otp: "", error: null };
     } catch (error: any) {
       return { otp: "", error: new Error(error.message) };
     }
@@ -239,12 +232,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     otp: string,
   ): Promise<{ valid: boolean; error: Error | null }> => {
     try {
-      const response = await postJson<{ ok: boolean; verified?: boolean }>(
-        "/api/v1/auth/otp/verify",
-        { email, otp },
-      );
+      const response = await fetch(`${SPRING_API_URL}/api/v1/auth/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
 
-      if (!response.ok || !response.verified) {
+      const data = await response.json();
+      if (!data.ok || !data.verified) {
         return {
           valid: false,
           error: new Error("Invalid or expired OTP. Please request a new one."),
