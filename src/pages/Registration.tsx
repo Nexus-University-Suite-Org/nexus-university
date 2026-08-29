@@ -45,7 +45,7 @@ import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
 
 interface CourseUnit {
   id: string;
@@ -273,7 +273,7 @@ export default function Registration() {
           profile?.full_name || profile?.student_number || user.email;
 
         try {
-          await postBackend(
+          await postMessagingBackend(
             "/api/notifications/",
             {
               user_id: `lecturer-${course.course}`,
@@ -282,7 +282,6 @@ export default function Registration() {
               message: `${studentLabel} requested to enroll in ${course.name} (${course.code}).`,
               related_id: courseId,
             },
-            true,
           );
         } catch {
           // notification send is best-effort

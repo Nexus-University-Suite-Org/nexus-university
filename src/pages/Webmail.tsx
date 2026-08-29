@@ -38,7 +38,11 @@ import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow, format } from "date-fns";
-import { postBackend } from "@/lib/backendApi";
+import { toast } from "sonner";
+import { MiniStomp } from "@/lib/stompClient";
+
+const MESSAGING_BASE =
+  import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +61,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Message {
   id: string;
@@ -126,14 +137,20 @@ export default function Webmail() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const [messagingUid, setMessagingUid] = useState<string | null>(null);
+  const messagingUidRef = useRef<string | null>(null);
+  const stompRef = useRef<MiniStomp | null>(null);
 
   const downloadAttachment = async (
     attachmentUrl: string,
     attachmentName: string,
   ) => {
     try {
+      const fullUrl = attachmentUrl.startsWith("http")
+        ? attachmentUrl
+        : `${MESSAGING_BASE}${attachmentUrl}`;
       const a = document.createElement("a");
-      a.href = attachmentUrl;
+      a.href = fullUrl;
       a.download = attachmentName;
       a.target = "_blank";
       document.body.appendChild(a);
@@ -141,17 +158,86 @@ export default function Webmail() {
       document.body.removeChild(a);
     } catch (error) {
       console.error("Error downloading attachment:", error);
-      alert("Failed to download attachment");
+      toast.error("Failed to download attachment");
     }
   };
 
   useEffect(() => {
+    const email = profile?.email || user?.email || "";
+    if (!email) return;
+    fetch(
+      `${MESSAGING_BASE}/api/participants/resolve?email=${encodeURIComponent(email)}`,
+    )
+      .then((r) => r.json().catch(() => null))
+      .then((data) => {
+        if (data && data.found && data.id != null) {
+          setMessagingUid(String(data.id));
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (messagingUid) {
+      messagingUidRef.current = messagingUid;
+    }
     if (user) {
       fetchMessages();
       fetchDrafts();
       fetchUsers();
     }
-  }, [user, selectedView]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedView, messagingUid]);
+
+  useEffect(() => {
+    if (!messagingUid) return;
+    const topic = `/topic/messages/${messagingUid}`;
+    if (!stompRef.current) {
+      const wsBase = MESSAGING_BASE.replace(/^http/, "ws");
+      stompRef.current = new MiniStomp(`${wsBase}/ws`);
+      stompRef.current.connect(() => {
+        stompRef.current?.subscribe(topic, async (payload) => {
+          if (payload && payload.messageId != null) {
+            const updated = await fetchMessages();
+            const incoming = updated.find(
+              (m: any) =>
+                String(m.id) === String(payload.messageId) &&
+                String(m.to_user_id) === String(messagingUidRef.current),
+            );
+            if (incoming) {
+              const sender =
+                incoming.from_profile?.full_name || "Unknown";
+              toast("New message", {
+                description: `From ${sender}: ${incoming.subject}`,
+              });
+            }
+            window.dispatchEvent(new Event("notifications-updated"));
+          }
+        });
+      });
+    } else {
+      stompRef.current.subscribe(topic, async (payload) => {
+        if (payload && payload.messageId != null) {
+          const updated = await fetchMessages();
+          const incoming = updated.find(
+            (m: any) =>
+              String(m.id) === String(payload.messageId) &&
+              String(m.to_user_id) === String(messagingUidRef.current),
+          );
+          if (incoming) {
+            const sender =
+              incoming.from_profile?.full_name || "Unknown";
+            toast("New message", {
+              description: `From ${sender}: ${incoming.subject}`,
+            });
+          }
+          window.dispatchEvent(new Event("notifications-updated"));
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messagingUid]);
 
   useEffect(() => {
     // GSAP Title Animation
@@ -183,29 +269,48 @@ export default function Webmail() {
   }, []);
 
   const fetchUsers = async () => {
-    // Users list will be handled by manual input in compose view
-    // In a full implementation, you would fetch from platform API
-    setUsers([]);
+    try {
+      const resp = await fetch(`${MESSAGING_BASE}/api/directory`);
+      if (!resp.ok) {
+        setUsers([]);
+        return;
+      }
+      const directory = await resp.json();
+      const uid = messagingUidRef.current;
+      setUsers(
+        (directory || [])
+          .filter((d: any) => String(d.id) !== String(uid))
+          .map((d: any) => ({
+            id: String(d.id),
+            email: d.email || "",
+            full_name: d.full_name || "",
+          })),
+      );
+    } catch (error) {
+      console.error("Error fetching directory:", error);
+      setUsers([]);
+    }
   };
 
-  const fetchMessages = async () => {
-    if (!user) return;
+  const fetchMessages = async (): Promise<any[]> => {
+    if (!user) return [];
 
     try {
       setLoading(true);
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user.uid;
 
       const resp = await fetch(
-        `${API_BASE_URL}/api/messages/${user.uid}/?view=${selectedView}`
+        `${MESSAGING_BASE}/api/messages/${uid}/?view=${selectedView}`,
       );
       if (!resp.ok) throw new Error("Failed to fetch messages");
 
       const messagesData = await resp.json();
 
       setMessages(messagesData);
+      return messagesData;
     } catch (error) {
       console.error("Error fetching messages:", error);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -215,10 +320,9 @@ export default function Webmail() {
     if (!user) return;
 
     try {
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user.uid;
 
-      const resp = await fetch(`${API_BASE_URL}/api/drafts/${user.uid}/`);
+      const resp = await fetch(`${MESSAGING_BASE}/api/drafts/${uid}/`);
       if (!resp.ok) throw new Error("Failed to fetch drafts");
 
       const draftsData = await resp.json();
@@ -231,39 +335,72 @@ export default function Webmail() {
 
   const handleSendMessage = async () => {
     if (!user) {
-      alert("You must be logged in to send messages.");
+      toast.error("You must be logged in to send messages.");
       return;
     }
 
     if (!composeToId) {
-      alert("Please select a recipient from the list.");
+      toast.error("Please select a recipient from the list.");
       return;
     }
 
     if (!composeSubject.trim()) {
-      alert("Please enter a subject.");
+      toast.error("Please enter a subject.");
       return;
     }
 
     if (!composeBody.trim()) {
-      alert("Please enter a message.");
+      toast.error("Please enter a message.");
       return;
     }
 
     try {
       setSending(true);
 
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user.uid;
 
-      const resp = await fetch(`${API_BASE_URL}/api/messages/send/`, {
+      let attachmentUrl = null;
+      let attachmentName = null;
+      let attachmentSize = null;
+
+      if (attachmentFile) {
+        const reader = new FileReader();
+        const base64Data = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.readAsDataURL(attachmentFile);
+        });
+        const uploadResp = await fetch(`${MESSAGING_BASE}/api/attachments/base64`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_name: attachmentFile.name,
+            content_type: attachmentFile.type,
+            size: attachmentFile.size,
+            data: base64Data,
+          }),
+        });
+        if (uploadResp.ok) {
+          const uploadData = await uploadResp.json();
+          attachmentUrl = uploadData.url;
+          attachmentName = attachmentFile.name;
+          attachmentSize = attachmentFile.size;
+        }
+      }
+
+      const resp = await fetch(`${MESSAGING_BASE}/api/messages/send/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          from_user_id: user.uid,
+          from_user_id: uid,
           to_user_id: composeToId,
           subject: composeSubject,
           body: composeBody,
+          attachment_url: attachmentUrl,
+          attachment_name: attachmentName,
+          attachment_size: attachmentSize,
         }),
       });
 
@@ -280,12 +417,10 @@ export default function Webmail() {
       // Refresh messages
       fetchMessages();
 
-      alert("Message sent successfully!");
+      toast.success("Message sent successfully!");
     } catch (error: any) {
       console.error("Error sending message:", error);
-      alert(
-        "Failed to send message. Please try again. Error: " + error.message,
-      );
+      toast.error("Failed to send message. Please try again. Error: " + error.message);
     } finally {
       setSending(false);
     }
@@ -296,14 +431,13 @@ export default function Webmail() {
 
     try {
       setSavingDraft(true);
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user.uid;
 
-      await fetch(`${API_BASE_URL}/api/drafts/save/`, {
+      await fetch(`${MESSAGING_BASE}/api/drafts/save/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: user.uid,
+          user_id: uid,
           to_user_id: composeToId,
           subject: composeSubject,
           body: composeBody,
@@ -317,10 +451,10 @@ export default function Webmail() {
       setIsComposeOpen(false);
       fetchDrafts();
 
-      alert("Draft saved successfully!");
+      toast.success("Draft saved successfully!");
     } catch (error: any) {
       console.error("Error saving draft:", error);
-      alert("Failed to save draft. Error: " + error.message);
+      toast.error("Failed to save draft. Error: " + error.message);
     } finally {
       setSavingDraft(false);
     }
@@ -339,15 +473,14 @@ export default function Webmail() {
     }
 
     try {
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user?.uid;
 
-      await fetch(`${API_BASE_URL}/api/messages/${messageId}/action/`, {
+      await fetch(`${MESSAGING_BASE}/api/messages/${messageId}/action/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "star",
-          user_id: user?.uid,
+          user_id: uid,
         }),
       });
 
@@ -368,15 +501,14 @@ export default function Webmail() {
 
   const handleMarkAsRead = async (messageId: string) => {
     try {
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user?.uid;
 
-      await fetch(`${API_BASE_URL}/api/messages/${messageId}/action/`, {
+      await fetch(`${MESSAGING_BASE}/api/messages/${messageId}/action/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "read",
-          user_id: user?.uid,
+          user_id: uid,
         }),
       });
 
@@ -393,15 +525,14 @@ export default function Webmail() {
     if (!user) return;
 
     try {
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+      const uid = messagingUidRef.current || user.uid;
 
-      await fetch(`${API_BASE_URL}/api/messages/${messageId}/action/`, {
+      await fetch(`${MESSAGING_BASE}/api/messages/${messageId}/action/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "delete",
-          user_id: user.uid,
+          user_id: uid,
         }),
       });
 
@@ -416,7 +547,8 @@ export default function Webmail() {
     if (!selectedMessage) return;
 
     const replyTo =
-      selectedMessage.from_user_id === user?.uid
+      selectedMessage.from_user_id ===
+      (messagingUidRef.current || user?.uid)
         ? selectedMessage.to_profile
         : selectedMessage.from_profile;
 
@@ -460,9 +592,14 @@ export default function Webmail() {
 
   const handleArchive = async (messageId: string, currentValue: boolean) => {
     try {
-      await postBackend("/api/messages/" + messageId + "/action/", {
-        action: "archive",
-        user_id: user?.uid,
+      const uid = messagingUidRef.current || user?.uid;
+      await fetch(`${MESSAGING_BASE}/api/messages/${messageId}/action/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "archive",
+          user_id: uid,
+        }),
       });
       fetchMessages();
       if (selectedMessage?.id === messageId) {
@@ -487,7 +624,9 @@ export default function Webmail() {
   });
 
   const unreadCount = messages.filter(
-    (m) => !m.is_read && m.to_user_id === user?.uid,
+    (m) =>
+      !m.is_read &&
+      m.to_user_id === (messagingUidRef.current || user?.uid),
   ).length;
 
   const starredCount = messages.filter((m) => m.is_starred).length;
@@ -585,106 +724,65 @@ export default function Webmail() {
               className={`lg:col-span-1 ${sidebarOpen ? "block" : "hidden lg:block"}`}
             >
               <Card className="border-0 shadow-lg">
-                <CardContent className="p-3 md:p-4 space-y-1">
-                  <button
-                    onClick={() => {
-                      setSelectedView("inbox");
+                <CardContent className="p-3 md:p-4 space-y-3">
+                  <Select
+                    value={selectedView}
+                    onValueChange={(value) => {
+                      setSelectedView(value as ViewType);
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl transition-all text-left ${
-                      selectedView === "inbox"
-                        ? "bg-secondary text-secondary-foreground shadow-md"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
                   >
-                    <Inbox className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">Inbox</span>
-                    {unreadCount > 0 && (
-                      <Badge className="ml-auto bg-amber-500 text-xs">
-                        {unreadCount}
-                      </Badge>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedView("sent");
-                      setSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl transition-all text-left ${
-                      selectedView === "sent"
-                        ? "bg-secondary text-secondary-foreground shadow-md"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Send className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">Sent</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedView("drafts");
-                      setSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl transition-all text-left ${
-                      selectedView === "drafts"
-                        ? "bg-secondary text-secondary-foreground shadow-md"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <FileText className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">Drafts</span>
-                    {drafts.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto text-xs">
-                        {drafts.length}
-                      </Badge>
-                    )}
-                  </button>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => {
-                          setSelectedView("starred");
-                          setSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl transition-all text-left ${
-                          selectedView === "starred"
-                            ? "bg-secondary text-secondary-foreground shadow-md"
-                            : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Star className="h-5 w-5 flex-shrink-0" />
-                        <span className="font-medium">Starred</span>
-                        {starredCount > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="ml-auto text-xs"
-                          >
-                            {starredCount}
-                          </Badge>
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>View starred messages</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <button
-                    onClick={() => {
-                      setSelectedView("archived");
-                      setSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl transition-all text-left ${
-                      selectedView === "archived"
-                        ? "bg-secondary text-secondary-foreground shadow-md"
-                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Archive className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">Archived</span>
-                  </button>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select view" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inbox">
+                        <span className="flex items-center gap-2">
+                          <Inbox className="h-4 w-4" />
+                          Inbox
+                          {unreadCount > 0 && (
+                            <Badge className="ml-1 bg-amber-500 text-xs h-5 px-1.5">
+                              {unreadCount}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="sent">
+                        <span className="flex items-center gap-2">
+                          <Send className="h-4 w-4" />
+                          Sent
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="drafts">
+                        <span className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Drafts
+                          {drafts.length > 0 && (
+                            <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">
+                              {drafts.length}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="starred">
+                        <span className="flex items-center gap-2">
+                          <Star className="h-4 w-4" />
+                          Starred
+                          {starredCount > 0 && (
+                            <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">
+                              {starredCount}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="archived">
+                        <span className="flex items-center gap-2">
+                          <Archive className="h-4 w-4" />
+                          Archived
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
             </motion.div>
@@ -760,6 +858,69 @@ export default function Webmail() {
                 </Card>
               ) : (
                 <>
+                  {/* View Selector */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4"
+                  >
+                    <Select
+                      value={selectedView}
+                      onValueChange={(value) => setSelectedView(value as ViewType)}
+                    >
+                      <SelectTrigger className="h-12 bg-muted/50 border-0 rounded-xl">
+                        <SelectValue placeholder="Select view" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inbox">
+                          <span className="flex items-center gap-2">
+                            <Inbox className="h-4 w-4" />
+                            Inbox
+                            {unreadCount > 0 && (
+                              <Badge className="ml-1 bg-amber-500 text-xs h-5 px-1.5">
+                                {unreadCount}
+                              </Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="sent">
+                          <span className="flex items-center gap-2">
+                            <Send className="h-4 w-4" />
+                            Sent
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="drafts">
+                          <span className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Drafts
+                            {drafts.length > 0 && (
+                              <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">
+                                {drafts.length}
+                              </Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="starred">
+                          <span className="flex items-center gap-2">
+                            <Star className="h-4 w-4" />
+                            Starred
+                            {starredCount > 0 && (
+                              <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">
+                                {starredCount}
+                              </Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="archived">
+                          <span className="flex items-center gap-2">
+                            <Archive className="h-4 w-4" />
+                            Archived
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </motion.div>
+
                   {/* Search Bar */}
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -944,6 +1105,22 @@ export default function Webmail() {
                               <p className="text-sm font-medium mb-2">
                                 Attachment:
                               </p>
+                              {/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(
+                                selectedMessage.attachment_name || "",
+                              ) ? (
+                                <a
+                                  href={`${MESSAGING_BASE}${selectedMessage.attachment_url}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block mb-2"
+                                >
+                                  <img
+                                    src={`${MESSAGING_BASE}${selectedMessage.attachment_url}`}
+                                    alt={selectedMessage.attachment_name || "Attachment"}
+                                    className="max-w-full max-h-80 rounded-lg border object-contain"
+                                  />
+                                </a>
+                              ) : null}
                               <Button
                                 variant="outline"
                                 onClick={() =>
@@ -1007,7 +1184,8 @@ export default function Webmail() {
                               <AnimatePresence>
                                 {filteredMessages.map((message, index) => {
                                   const isSent =
-                                    message.from_user_id === user?.uid;
+                                    message.from_user_id ===
+                                    (messagingUidRef.current || user?.uid);
                                   const otherProfile = isSent
                                     ? message.to_profile
                                     : message.from_profile;
@@ -1282,7 +1460,7 @@ export default function Webmail() {
                       const file = e.target.files?.[0];
                       if (file) {
                         if (file.size > 10485760) {
-                          alert("File size must be less than 10MB");
+                          toast.error("File size must be less than 10MB");
                           return;
                         }
                         setAttachmentFile(file);

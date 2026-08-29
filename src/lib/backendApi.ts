@@ -4,6 +4,9 @@ const API_BASE_URL =
 const NU_API_BASE_URL =
   import.meta.env.VITE_NU_API_BASE_URL || "http://localhost:8082";
 
+const MESSAGING_API_BASE_URL =
+  import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
+
 const AUTH_TOKEN_KEY = "nexus-auth-token";
 
 function getToken(): string | null {
@@ -87,6 +90,27 @@ export async function postNuBackend<T>(
       "Content-Type": "application/json",
       ...(auth ? authHeaders() : {}),
     },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+// Messaging Backend (port 8084) helpers for notifications, messages, etc.
+export async function getMessagingBackend<T>(path: string): Promise<T> {
+  const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+export async function postMessagingBackend<T>(
+  path: string,
+  payload: unknown,
+): Promise<T> {
+  const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   return handleResponse(response) as Promise<T>;

@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { LecturerSidebar } from "./LecturerSidebar";
-import { getBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 
 interface LecturerLayoutProps {
   children: React.ReactNode;
@@ -38,7 +38,7 @@ export function LecturerLayout({ children }: LecturerLayoutProps) {
     if (user?.uid) {
       const fetchUnreadCount = async () => {
         try {
-          const data = await getBackend<any[]>("/api/notifications/?user_id=" + user.uid);
+          const data = await getMessagingBackend<any[]>("/api/notifications/?user_id=" + user.uid);
           setUnreadCount(data.filter((n) => !n.is_read).length);
         } catch {
           // Silently fail

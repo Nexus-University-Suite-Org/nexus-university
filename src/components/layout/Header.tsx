@@ -24,7 +24,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
-import { getBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,7 +38,7 @@ export function Header() {
 
     const fetchUnreadCount = async () => {
       try {
-        const data = await getBackend<any[]>(
+        const data = await getMessagingBackend<any[]>(
           `/api/notifications/?user_id=${encodeURIComponent(user.uid)}&is_read=false`,
         );
         setUnreadCount(data.length);

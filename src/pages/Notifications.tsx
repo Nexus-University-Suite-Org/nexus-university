@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getMessagingBackend, postMessagingBackend } from "@/lib/backendApi";
 import { formatDistanceToNow } from "date-fns";
 
 interface Notification {
@@ -128,7 +128,7 @@ export default function Notifications() {
 
     try {
       setLoading(true);
-      const data: any[] = await getBackend(
+      const data: any[] = await getMessagingBackend(
         `/api/notifications/?user_id=${user.uid}`,
       );
       setNotifications(data || []);
@@ -141,7 +141,7 @@ export default function Notifications() {
 
   const markAsRead = async (id: string) => {
     try {
-      await postBackend(`/api/notifications/${id}/read/`, {});
+      await postMessagingBackend(`/api/notifications/${id}/read/`, {});
 
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
@@ -157,7 +157,7 @@ export default function Notifications() {
     if (!user?.uid) return;
 
     try {
-      await postBackend("/api/notifications/mark-all-read/", {
+      await postMessagingBackend("/api/notifications/mark-all-read/", {
         user_id: user.uid,
       });
 

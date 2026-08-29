@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
 
 interface StudentGrade {
   id: string;
@@ -326,7 +326,7 @@ export default function LecturerGradeBook() {
       const courseData = courses.find((c) => c.id === selectedCourse);
       const courseName = courseData?.title || courseData?.code || "Course";
 
-      await postBackend("/api/notifications/", {
+      await postMessagingBackend("/api/notifications/", {
         user_id: student.student_id,
         type: "grade_update",
         title: "Grade Updated",

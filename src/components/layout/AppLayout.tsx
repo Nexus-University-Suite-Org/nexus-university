@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
-import { getBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 import {
   Tooltip,
   TooltipContent,
@@ -115,7 +115,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (user?.uid) {
       const fetchUnreadCount = async () => {
         try {
-          const data = await getBackend<any[]>(
+          const data = await getMessagingBackend<any[]>(
             "/api/notifications/?user_id=" + user.uid,
           );
           setUnreadCount(data.filter((n) => !n.is_read).length);

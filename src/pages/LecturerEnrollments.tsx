@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { LecturerBottomNav } from "@/components/layout/LecturerBottomNav";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -146,7 +146,7 @@ export default function LecturerEnrollments() {
     try {
       // Notify the student when their enrollment is reviewed
       if (target.student_id) {
-        await postBackend(
+        await postMessagingBackend(
           "/api/notifications/",
           {
             user_id: target.student_id,

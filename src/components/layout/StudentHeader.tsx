@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { StudentSidebar } from "./StudentSidebar";
-import { getBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 
 export function StudentHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,7 +44,7 @@ export function StudentHeader() {
   const fetchUnreadCount = async () => {
     if (!user?.uid) return;
     try {
-      const data = await getBackend<any[]>(
+      const data = await getMessagingBackend<any[]>(
         `/api/notifications/?user_id=${encodeURIComponent(user.uid)}&is_read=false`,
       );
       setUnreadCount(data.length);
