@@ -29,7 +29,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postBackend, getMessagingBackend } from "@/lib/backendApi";
 import { Link } from "react-router-dom";
 
 interface Enrollment {
@@ -37,6 +37,7 @@ interface Enrollment {
   status: string;
   enrolled_at: string;
   grade: number | null;
+  paper_type: string;
   course: {
     code: string;
     title: string;
@@ -83,22 +84,9 @@ export function EnrollmentRegistrationTab() {
   const fetchCourseUnits = async (programTitle: string) => {
     try {
       setLoadingUnits(true);
-      // First, find the course (program) ID by its title
-      const courses = await getBackend<any[]>(
-        `/api/courses/?name=${encodeURIComponent(programTitle)}`,
-      );
-
-      if (courses.length === 0) {
-        console.warn("No course found matching program title:", programTitle);
-        setCourseUnits([]);
-        return;
-      }
-
-      const courseId = courses[0].id;
-
-      // Now fetch course units for this course_id
-      const unitsData = await getBackend<any[]>(
-        `/api/course-units/?course_id=${courseId}`,
+      // Fetch all course units from the messaging backend
+      const unitsData = await getMessagingBackend<any[]>(
+        `/api/course-units/`,
       );
       const mapped: CourseUnit[] = unitsData.map((u: any) => ({
         id: u.id,
@@ -146,7 +134,7 @@ export function EnrollmentRegistrationTab() {
     try {
       if (!user) return;
       setLoading(true);
-      const enrollmentDocs = await getBackend<any[]>(
+      const enrollmentDocs = await getMessagingBackend<any[]>(
         `/api/enrollments/?student_id=${user.uid}`,
       );
       console.log("Enrollment data:", enrollmentDocs);
@@ -890,6 +878,19 @@ export function EnrollmentRegistrationTab() {
                         </Badge>
                         <Badge className={getStatusColor(enrollment.status)}>
                           {enrollment.status}
+                        </Badge>
+                        <Badge
+                          className={`text-xs border-0 ${
+                            (enrollment.paper_type || "normal") === "retake"
+                              ? "bg-red-500/10 text-red-600"
+                              : (enrollment.paper_type || "normal") === "missed"
+                                ? "bg-amber-500/10 text-amber-600"
+                                : (enrollment.paper_type || "normal") === "supplementary"
+                                  ? "bg-purple-500/10 text-purple-600"
+                                  : "bg-blue-500/10 text-blue-600"
+                          }`}
+                        >
+                          {(enrollment.paper_type || "normal").charAt(0).toUpperCase() + (enrollment.paper_type || "normal").slice(1)}
                         </Badge>
                       </div>
                       <p className="font-medium">{enrollment.course?.title}</p>

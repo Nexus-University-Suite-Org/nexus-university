@@ -46,6 +46,7 @@ import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 
 interface CourseUnit {
   id: string;
@@ -109,10 +110,11 @@ export default function Registration() {
   const [step, setStep] = useState<"select" | "review">("select");
   const [registrationNumber, setRegistrationNumber] = useState<string>("");
   const [studentNumber, setStudentNumber] = useState<string>("");
+  const [paperTypes, setPaperTypes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchData();
-  }, [user, profile, selectedSemester, selectedYear]);
+  }, [user, selectedSemester, selectedYear]);
 
   useEffect(() => {
     if (profile) {
@@ -125,29 +127,9 @@ export default function Registration() {
     try {
       setLoading(true);
 
-      let targetCourseId = profile?.course_id;
-
-      // If no direct course_id, derive it from the programme name
-      if (!targetCourseId && profile?.programme) {
-        const courses = await getBackend<BackendCourse[]>(
-          `/api/courses/?name=${encodeURIComponent(profile.programme)}`,
-          true,
-        );
-        if (courses && courses.length > 0) {
-          targetCourseId = courses[0].id;
-        }
-      }
-
-      if (!targetCourseId) {
-        setCourseUnits([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch course units for the current semester/year and student's program
-      const units = await getBackend<BackendCourseUnit[]>(
-        `/api/course-units/?course_id=${targetCourseId}&semester=${selectedSemester}&year=${selectedYear}`,
-        true,
+      // Fetch course units for the current semester
+      const units = await getMessagingBackend<BackendCourseUnit[]>(
+        `/api/course-units/?semester=${selectedSemester}`,
       );
 
       setCourseUnits(
@@ -164,9 +146,8 @@ export default function Registration() {
 
       // Fetch existing enrollments
       if (user) {
-        const enrollments = await getBackend<BackendEnrollment[]>(
+        const enrollments = await getMessagingBackend<BackendEnrollment[]>(
           `/api/enrollments/?student_id=${user.uid}`,
-          true,
         );
         const enrollmentsMap: Record<string, string> = {};
         (enrollments || []).forEach((e) => {
@@ -254,41 +235,17 @@ export default function Registration() {
         true,
       );
 
-      // Create enrollments
-      await postBackend(
-        "/api/enrollments/",
-        {
-          student_id: user.uid,
-          course_ids: selectedCourses,
-        },
-        true,
+      // Create enrollments via Lecturer-Backend (port 8084)
+      await postMessagingBackend(
+        "/api/enrollments/batch",
+        selectedCourses.map((courseId) => ({
+          studentId: Number(user.uid),
+          courseId: Number(courseId),
+          paperType: paperTypes[courseId] || "normal",
+        })),
       );
 
-      // Notify lecturers
-      const notificationPromises = selectedCourses.map(async (courseId) => {
-        const course = courseUnits.find((c) => c.id === courseId);
-        if (!course) return;
-
-        const studentLabel =
-          profile?.full_name || profile?.student_number || user.email;
-
-        try {
-          await postMessagingBackend(
-            "/api/notifications/",
-            {
-              user_id: `lecturer-${course.course}`,
-              type: "enrollment_request",
-              title: "Enrollment Request",
-              message: `${studentLabel} requested to enroll in ${course.name} (${course.code}).`,
-              related_id: courseId,
-            },
-          );
-        } catch {
-          // notification send is best-effort
-        }
-      });
-
-      await Promise.allSettled(notificationPromises);
+      // Lecturer notifications are created automatically by the backend
 
       toast({
         title: "Registration Submitted!",
@@ -733,7 +690,7 @@ export default function Registration() {
                                         }}
                                         className="flex items-center justify-between p-3 rounded-xl bg-secondary/5 border border-secondary/20 group"
                                       >
-                                        <div className="min-w-0">
+                                        <div className="min-w-0 flex-1">
                                           <p className="font-medium text-sm truncate">
                                             {course.name}
                                           </p>
@@ -747,6 +704,27 @@ export default function Registration() {
                                             <span className="text-xs text-secondary font-medium">
                                               {course.credits} cr
                                             </span>
+                                          </div>
+                                          <div className="mt-1.5">
+                                            <Select
+                                              value={paperTypes[course.id] || "normal"}
+                                              onValueChange={(val) =>
+                                                setPaperTypes((prev) => ({ ...prev, [course.id]: val }))
+                                              }
+                                            >
+                                              <SelectTrigger
+                                                className="h-7 text-xs w-full"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="normal">Normal</SelectItem>
+                                                <SelectItem value="missed">Missed</SelectItem>
+                                                <SelectItem value="retake">Retake</SelectItem>
+                                                <SelectItem value="supplementary">Supplementary</SelectItem>
+                                              </SelectContent>
+                                            </Select>
                                           </div>
                                         </div>
                                         <button
@@ -881,39 +859,55 @@ export default function Registration() {
                       </div>
                     </div>
 
-                    {/* Selected Courses */}
-                    <div>
-                      <h3 className="font-semibold mb-3">
-                        Selected Courses ({selectedCourses.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {selectedCourses.map((id) => {
-                          const course = courseUnits.find((c) => c.id === id);
-                          if (!course) return null;
-                          return (
-                            <div
-                              key={id}
-                              className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
-                            >
-                              <div className="flex items-center gap-3">
-                                <Badge
-                                  variant="outline"
-                                  className="font-mono text-xs"
-                                >
-                                  {course.code}
-                                </Badge>
-                                <span className="font-medium">
-                                  {course.name}
-                                </span>
+                      {/* Selected Courses */}
+                      <div>
+                        <h3 className="font-semibold mb-3">
+                          Selected Courses ({selectedCourses.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {selectedCourses.map((id) => {
+                            const course = courseUnits.find((c) => c.id === id);
+                            if (!course) return null;
+                            const pt = paperTypes[course.id] || "normal";
+                            return (
+                              <div
+                                key={id}
+                                className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Badge
+                                    variant="outline"
+                                    className="font-mono text-xs"
+                                  >
+                                    {course.code}
+                                  </Badge>
+                                  <span className="font-medium">
+                                    {course.name}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    className={`text-xs border-0 ${
+                                      pt === "retake"
+                                        ? "bg-red-500/10 text-red-600"
+                                        : pt === "missed"
+                                          ? "bg-amber-500/10 text-amber-600"
+                                          : pt === "supplementary"
+                                            ? "bg-purple-500/10 text-purple-600"
+                                            : "bg-blue-500/10 text-blue-600"
+                                    }`}
+                                  >
+                                    {pt.charAt(0).toUpperCase() + pt.slice(1)}
+                                  </Badge>
+                                  <Badge className="bg-accent/10 text-accent">
+                                    {course.credits} Credits
+                                  </Badge>
+                                </div>
                               </div>
-                              <Badge className="bg-accent/10 text-accent">
-                                {course.credits} Credits
-                              </Badge>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
 
                     {/* Summary */}
                     <div className="p-4 rounded-xl bg-gradient-to-br from-secondary/10 to-accent/10 border border-secondary/20">

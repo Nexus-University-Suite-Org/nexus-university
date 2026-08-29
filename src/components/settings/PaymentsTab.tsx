@@ -48,7 +48,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postBackend, getMessagingBackend } from "@/lib/backendApi";
 
 interface Fee {
   id: string;
@@ -139,7 +139,7 @@ export function PaymentsTab() {
 
       const [feesData, enrollmentsData] = await Promise.all([
         getBackend<any[]>(`/api/student-fees/?student_id=${user.uid}`),
-        getBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`),
+        getMessagingBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`),
       ]);
 
       setFees(feesData as Fee[]);
@@ -153,7 +153,7 @@ export function PaymentsTab() {
         // Fetch course units for enrolled courses
         let courseUnits: any[] = [];
         if (courseIds.length > 0) {
-          courseUnits = await getBackend<any[]>("/api/course-units/");
+          courseUnits = await getMessagingBackend<any[]>("/api/course-units/");
         }
 
         const courseMap: Record<string, any> = {};

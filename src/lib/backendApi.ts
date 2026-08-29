@@ -67,6 +67,22 @@ export async function deleteBackend<T>(path: string, auth: boolean = false): Pro
   return handleResponse(response) as Promise<T>;
 }
 
+export async function putBackend<T>(
+  path: string,
+  payload: unknown,
+  auth: boolean = false,
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? authHeaders() : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
 // NU-Backend (port 8082) helpers for payments, OTP, etc.
 export async function getNuBackend<T>(path: string, auth: boolean = false): Promise<T> {
   const response = await fetch(`${NU_API_BASE_URL}${path}`, {
@@ -110,6 +126,18 @@ export async function postMessagingBackend<T>(
 ): Promise<T> {
   const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+export async function putMessagingBackend<T>(
+  path: string,
+  payload: unknown,
+): Promise<T> {
+  const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });

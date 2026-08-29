@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, postBackend, getMessagingBackend } from "@/lib/backendApi";
 
 interface StudentAssignment {
   id: string;
@@ -205,7 +205,7 @@ export default function StudentAssignments() {
             setLoading(true);
 
             // Get all courses the student is enrolled in
-            const enrollmentsData = await getBackend<any[]>("/api/enrollments/");
+            const enrollmentsData = await getMessagingBackend<any[]>("/api/enrollments/");
             const courseIds = enrollmentsData
               .map((d: any) => d.course_id)
               .filter(Boolean);

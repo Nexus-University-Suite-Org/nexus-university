@@ -26,7 +26,7 @@ import {
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 
 interface BackendCourse {
   id: string;
@@ -43,6 +43,7 @@ interface BackendEnrollment {
   status: "pending" | "approved" | "rejected" | "completed";
   grade: number | null;
   enrolled_at: string;
+  paper_type: string;
   course: BackendCourse | null;
 }
 
@@ -52,6 +53,7 @@ interface Enrollment {
   status: "pending" | "approved" | "rejected" | "completed";
   enrolled_at: string;
   grade: number | null;
+  paper_type: string;
   course?: {
     id: string;
     code: string;
@@ -97,9 +99,8 @@ export default function Enrollment() {
   const fetchEnrollments = async () => {
     if (!user?.uid) return;
     try {
-      const data = await getBackend<BackendEnrollment[]>(
+      const data = await getMessagingBackend<BackendEnrollment[]>(
         `/api/enrollments/?student_id=${user.uid}`,
-        true,
       );
 
       const mapped: Enrollment[] = (data || []).map((e) => ({
@@ -108,6 +109,7 @@ export default function Enrollment() {
         status: e.status,
         enrolled_at: e.enrolled_at,
         grade: e.grade,
+        paper_type: e.paper_type || "normal",
         course: e.course
           ? {
               id: e.course.id,
@@ -339,6 +341,19 @@ export default function Enrollment() {
                                 </Badge>
                                 <Badge className="bg-accent/10 text-accent hover:bg-accent/20 text-xs">
                                   {enrollment.course?.credits} Credits
+                                </Badge>
+                                <Badge
+                                  className={`text-xs border-0 ${
+                                    enrollment.paper_type === "retake"
+                                      ? "bg-red-500/10 text-red-600"
+                                      : enrollment.paper_type === "missed"
+                                        ? "bg-amber-500/10 text-amber-600"
+                                        : enrollment.paper_type === "supplementary"
+                                          ? "bg-purple-500/10 text-purple-600"
+                                          : "bg-blue-500/10 text-blue-600"
+                                  }`}
+                                >
+                                  {enrollment.paper_type.charAt(0).toUpperCase() + enrollment.paper_type.slice(1)}
                                 </Badge>
                               </div>
                               <h3 className="font-medium mt-1 truncate">
