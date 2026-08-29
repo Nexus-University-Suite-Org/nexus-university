@@ -7,6 +7,8 @@ const NU_API_BASE_URL =
 const MESSAGING_API_BASE_URL =
   import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
 
+export { MESSAGING_API_BASE_URL };
+
 const AUTH_TOKEN_KEY = "nexus-auth-token";
 
 function getToken(): string | null {
@@ -142,4 +144,14 @@ export async function putMessagingBackend<T>(
     body: JSON.stringify(payload),
   });
   return handleResponse(response) as Promise<T>;
+}
+
+export async function uploadAttachment(file: File): Promise<{ id: number; url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(`${MESSAGING_API_BASE_URL}/api/attachments/upload`, {
+    method: "POST",
+    body: formData,
+  });
+  return handleResponse(response) as Promise<{ id: number; url: string }>;
 }

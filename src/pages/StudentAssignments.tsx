@@ -8,7 +8,6 @@ import {
   CheckCircle,
   Download,
   Eye,
-  Filter,
   BookOpen,
   ClipboardList,
   Upload,
@@ -16,16 +15,20 @@ import {
 } from "lucide-react";
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMemo } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { getBackend, postBackend, getMessagingBackend } from "@/lib/backendApi";
+import {
+  getMessagingBackend,
+  postMessagingBackend,
+  uploadAttachment,
+  MESSAGING_API_BASE_URL,
+} from "@/lib/backendApi";
 
 interface StudentAssignment {
   id: string;
@@ -41,6 +44,8 @@ interface StudentAssignment {
   submissionStatus?: string;
   score?: number;
   feedback?: string;
+  submissionFileUrl?: string;
+  submissionFileName?: string;
 }
 
 const rise = {
@@ -68,45 +73,103 @@ export default function StudentAssignments() {
   const [submissionFile, setSubmissionFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load assignments for enrolled courses
-  useEffect(() => {
+  const loadAssignments = async () => {
     if (!user) return;
-    const loadAssignments = async () => {
-      try {
-        setLoading(true);
-        const API_BASE_URL =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-        const resp = await fetch(`${API_BASE_URL}/api/assignments/`);
-        if (!resp.ok) throw new Error("Failed to fetch assignments");
-        const data = (await resp.json()) as any[];
+    try {
+      setLoading(true);
 
-        const mapped: StudentAssignment[] = data.map((a, idx) => ({
-          id: String(a.id),
-          title: a.title,
-          description: a.description || "",
-          dueDate: a.due_date || new Date().toISOString(),
-          totalPoints: a.total_points || 100,
-          courseTitle: a.course_title || "Course",
-          courseCode: a.course_code || "",
-          status: a.status === "pending" ? "pending" : a.status || "pending",
-          instructionDocumentUrl: a.instruction_document_url || undefined,
-          instructionDocumentName: a.instruction_document_name || undefined,
-        }));
+      const enrollmentsData = await getMessagingBackend<any[]>("/api/enrollments/");
+      const courseIds = enrollmentsData
+        .map((d: any) => d.course_id)
+        .filter(Boolean);
 
-        setAssignments(mapped);
-      } catch (error: any) {
-        console.error("Error loading assignments:", error);
-        toast({
-          title: "Could not load assignments",
-          description:
-            error.message || "There was an error loading your assignments.",
-          variant: "destructive",
-        });
-      } finally {
+      if (courseIds.length === 0) {
+        setAssignments([]);
         setLoading(false);
+        return;
       }
-    };
 
+      const assignmentsData = await getMessagingBackend<any[]>("/api/assignments/");
+
+      if (assignmentsData.length === 0) {
+        setAssignments([]);
+        setLoading(false);
+        return;
+      }
+
+      const submissionsData = await getMessagingBackend<any[]>(
+        `/api/submissions/?student_id=${encodeURIComponent(String(user.uid))}`,
+      );
+
+      const courseUnitsData = await getMessagingBackend<any[]>("/api/course-units/");
+      const courseMap = new Map();
+      courseUnitsData.forEach((d: any) => courseMap.set(d.id, d));
+
+      const publishedAssignments = assignmentsData
+        .filter((a) => a.status !== "closed" && a.status !== "graded")
+        .sort(
+          (a, b) =>
+            new Date(a.due_date).getTime() -
+            new Date(b.due_date).getTime(),
+        );
+
+      if (publishedAssignments.length === 0) {
+        setAssignments([]);
+        setLoading(false);
+        return;
+      }
+
+      const mapped: StudentAssignment[] = publishedAssignments.map(
+        (assignment: any) => {
+          const submission = submissionsData.find(
+            (s) => s.assignment_id === assignment.id,
+          );
+
+          let status: "pending" | "submitted" | "graded" = "pending";
+          if (submission) {
+            if (submission.score !== undefined && submission.score !== null) {
+              status = "graded";
+            } else {
+              status = "submitted";
+            }
+          }
+
+          const course = courseMap.get(assignment.course_id);
+
+          return {
+            id: assignment.id,
+            title: assignment.title,
+            description: assignment.description || "",
+            dueDate: assignment.due_date,
+            totalPoints: assignment.total_points ?? 100,
+            courseTitle: course?.name || course?.course_unit_name || "Course",
+            courseCode: course?.code || course?.course_unit_code || "",
+            status,
+            instructionDocumentUrl: assignment.instruction_document_url,
+            instructionDocumentName: assignment.instruction_document_name,
+            submissionStatus: submission?.status,
+            score: submission?.score,
+            feedback: submission?.feedback,
+            submissionFileUrl: submission?.file_url,
+            submissionFileName: submission?.file_name,
+          };
+        },
+      );
+
+      setAssignments(mapped);
+    } catch (error) {
+      console.error("Error loading assignments:", error);
+      toast({
+        title: "Error loading assignments",
+        description: "Could not load assignments. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadAssignments();
   }, [user, toast]);
 
@@ -125,7 +188,8 @@ export default function StudentAssignments() {
   const handleDownloadDocument = async (url: string, filename: string) => {
     try {
       setDownloading(true);
-      const response = await fetch(url);
+      const fullUrl = url.startsWith("http") ? url : `${MESSAGING_API_BASE_URL}${url}`;
+      const response = await fetch(fullUrl);
       if (!response.ok) throw new Error("Failed to download document");
 
       const blob = await response.blob();
@@ -169,153 +233,35 @@ export default function StudentAssignments() {
     try {
       setSubmitting(true);
 
-      // TODO: file upload not yet implemented
+      let fileUrl: string | null = null;
+      let fileName: string | null = null;
+
       if (submissionFile) {
-        console.log("File upload not yet implemented - filename:", submissionFile.name);
+        const uploaded = await uploadAttachment(submissionFile);
+        fileUrl = uploaded.url;
+        fileName = submissionFile.name;
       }
 
-      // Save submission to database
       const submissionData = {
         student_id: user.uid,
         assignment_id: selectedAssignment.id,
         content: submissionText.trim(),
-        file_url: null,
-        file_name: submissionFile?.name || null,
-        status: "submitted",
-        score: null,
-        feedback: null,
+        file_url: fileUrl,
+        file_name: fileName,
       };
-      await postBackend("/api/submissions/", submissionData);
+      await postMessagingBackend("/api/submissions/", submissionData);
 
       toast({
-        title: "Assignment submitted! 🎉",
+        title: "Assignment submitted!",
         description: "Your assignment has been submitted successfully.",
       });
 
-      // Reset form and close modal
       setSubmissionText("");
       setSubmissionFile(null);
       setShowSubmissionForm(false);
       setSelectedAssignment(null);
 
-      // Refresh assignments to update status
-      if (user) {
-        const loadAssignments = async () => {
-          try {
-            setLoading(true);
-
-            // Get all courses the student is enrolled in
-            const enrollmentsData = await getMessagingBackend<any[]>("/api/enrollments/");
-            const courseIds = enrollmentsData
-              .map((d: any) => d.course_id)
-              .filter(Boolean);
-
-            if (courseIds.length === 0) {
-              setAssignments([]);
-              setLoading(false);
-              return;
-            }
-
-            // Get all assignments for these courses
-            const assignmentsData = await getBackend<any[]>("/api/assignments/");
-
-            if (assignmentsData.length === 0) {
-              setAssignments([]);
-              setLoading(false);
-              return;
-            }
-
-            const assignmentIds = assignmentsData.map((a: any) => a.id);
-
-            // Get student's submissions for these assignments
-            const submissionsData = await getBackend<any[]>("/api/submissions/");
-
-            // Fetch course details for these assignments
-            const uniqueCourseIds = Array.from(
-              new Set(assignmentsData.map((a: any) => a.course_id)),
-            );
-            const courseUnitsData = await getBackend<any[]>("/api/course-units/");
-            const courseMap = new Map();
-            courseUnitsData.forEach((d: any) => courseMap.set(d.id, d));
-
-            // Filter to show assignments that are visible to students (not closed or graded)
-            const publishedAssignments = assignmentsData
-              .filter((a) => a.status !== "closed" && a.status !== "graded")
-              .sort(
-                (a, b) =>
-                  new Date(a.due_date).getTime() -
-                  new Date(b.due_date).getTime(),
-              );
-
-            console.log("Published assignments:", publishedAssignments.length);
-            console.log(
-              "Assignment statuses found:",
-              assignmentsData.map((a) => ({
-                title: a.title,
-                status: a.status,
-              })),
-            );
-            console.log(
-              "Visible assignments:",
-              publishedAssignments.map((a) => ({
-                title: a.title,
-                status: a.status,
-              })),
-            );
-
-            if (publishedAssignments.length === 0) {
-              setAssignments([]);
-              setLoading(false);
-              return;
-            }
-
-            // Map assignments with submission status
-            const mapped: StudentAssignment[] = publishedAssignments.map(
-              (assignment: any) => {
-                const submission = submissionsData.find(
-                  (s) => s.assignment_id === assignment.id,
-                );
-
-                let status: "pending" | "submitted" | "graded" = "pending";
-                if (submission?.status === "submitted") {
-                  status =
-                    submission.score !== undefined ? "graded" : "submitted";
-                }
-
-                const course = courseMap.get(assignment.course_id);
-
-                return {
-                  id: assignment.id,
-                  title: assignment.title,
-                  description: assignment.description || "",
-                  dueDate: assignment.due_date,
-                  totalPoints: assignment.total_points ?? 100,
-                  courseTitle: course?.name || "Course",
-                  courseCode: course?.code || "",
-                  status,
-                  instructionDocumentUrl: assignment.instruction_document_url,
-                  instructionDocumentName: assignment.instruction_document_name,
-                  submissionStatus: submission?.status,
-                  score: submission?.score,
-                  feedback: submission?.feedback,
-                };
-              },
-            );
-
-            setAssignments(mapped);
-          } catch (error) {
-            console.error("Error loading assignments:", error);
-            toast({
-              title: "Error loading assignments",
-              description: "Could not load assignments. Please try again.",
-              variant: "destructive",
-            });
-          } finally {
-            setLoading(false);
-          }
-        };
-        loadAssignments();
-      }
+      await loadAssignments();
     } catch (error) {
       console.error("Submission error:", error);
       toast({
@@ -331,8 +277,7 @@ export default function StudentAssignments() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Basic file validation
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 10 * 1024 * 1024;
       const allowedTypes = [
         "application/pdf",
         "application/msword",
@@ -606,7 +551,7 @@ export default function StudentAssignments() {
                       )}
 
                       {/* Score if graded */}
-                      {assignment.score !== undefined && (
+                      {assignment.score !== undefined && assignment.score !== null && (
                         <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-300/30">
                           <p className="text-sm font-semibold text-emerald-700">
                             Score: {assignment.score}/{assignment.totalPoints}
@@ -715,7 +660,7 @@ export default function StudentAssignments() {
                   {selectedAssignment.totalPoints}
                 </p>
               </div>
-              {selectedAssignment.score !== undefined && (
+              {selectedAssignment.score !== undefined && selectedAssignment.score !== null && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">
                     Your Score
@@ -746,6 +691,36 @@ export default function StudentAssignments() {
                 <p className="text-sm text-muted-foreground">
                   {selectedAssignment.feedback}
                 </p>
+              </div>
+            )}
+
+            {/* Submitted File */}
+            {selectedAssignment.submissionFileUrl && (
+              <div className="space-y-2 p-4 rounded-lg bg-primary/10 border border-primary/30">
+                <h3 className="font-semibold">Your Submission</h3>
+                {/\.(jpg|jpeg|png|gif|webp)$/i.test(selectedAssignment.submissionFileName || selectedAssignment.submissionFileUrl) && (
+                  <div className="rounded-lg overflow-hidden border border-border/60">
+                    <img
+                      src={selectedAssignment.submissionFileUrl}
+                      alt={selectedAssignment.submissionFileName || "Submitted file"}
+                      className="max-w-full max-h-64 object-contain bg-muted/30"
+                    />
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  className="gap-2 w-full"
+                  onClick={() =>
+                    handleDownloadDocument(
+                      selectedAssignment.submissionFileUrl!,
+                      selectedAssignment.submissionFileName || "submission-file",
+                    )
+                  }
+                  disabled={downloading}
+                >
+                  <Download className="h-4 w-4" />
+                  {selectedAssignment.submissionFileName || "Download your submission"}
+                </Button>
               </div>
             )}
 
