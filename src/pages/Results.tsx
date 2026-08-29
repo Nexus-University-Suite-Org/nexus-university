@@ -173,16 +173,59 @@ export default function Results() {
 
         const API_BASE_URL =
           import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+        const MESSAGING_URL =
+          import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
 
-        // Fetch both exam and quiz results from the API
-        const resp = await fetch(
-          `${API_BASE_URL}/api/students/${user.uid}/results/`
-        );
-        if (!resp.ok) throw new Error("Failed to fetch results");
-        const resultsData = await resp.json();
+        // Fetch exam results from NAP-Backend (port 8000)
+        let examData: any[] = [];
+        try {
+          const resp = await fetch(
+            `${API_BASE_URL}/api/students/${user.uid}/results/`
+          );
+          if (resp.ok) {
+            const resultsData = await resp.json();
+            examData = resultsData.exam_results || [];
+          }
+        } catch {
+          console.log("NAP-Backend unavailable, loading quiz results only");
+        }
 
-        const examData = resultsData.exam_results || [];
-        const quizData = resultsData.quiz_results || [];
+        // Fetch quiz results from Lecturer-Backend (port 8084)
+        let quizData: any[] = [];
+        try {
+          const quizResp = await fetch(
+            `${MESSAGING_URL}/api/quiz-attempts/?student_id=${user.uid}`
+          );
+          if (quizResp.ok) {
+            const attempts = await quizResp.json();
+            // Fetch quiz titles
+            const quizIds = [...new Set(attempts.map((a: any) => a.quiz_id))];
+            const quizMap: Record<string, string> = {};
+            for (const qid of quizIds) {
+              try {
+                const qResp = await fetch(`${MESSAGING_URL}/api/quizzes/${qid}/`);
+                if (qResp.ok) {
+                  const qData = await qResp.json();
+                  quizMap[String(qid)] = qData.title || "Quiz";
+                }
+              } catch {}
+            }
+            quizData = attempts.map((a: any) => ({
+              id: String(a.id),
+              quiz_id: String(a.quiz_id),
+              quiz_title: quizMap[String(a.quiz_id)] || "Quiz",
+              score: a.score,
+              total_points: a.total_points,
+              percentage: a.percentage,
+              completed_at: a.completed_at,
+              time_taken: a.time_taken,
+              passed: a.passed,
+              status: a.status,
+            }));
+          }
+        } catch {
+          console.log("Failed to fetch quiz results");
+        }
 
         if (examData.length === 0) {
           console.log("No exam grade data found for student");
