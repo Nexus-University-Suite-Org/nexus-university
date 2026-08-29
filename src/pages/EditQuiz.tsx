@@ -30,7 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, getMessagingBackend, postBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 
 interface CourseOption {
@@ -150,7 +150,7 @@ export default function EditQuiz() {
       setLoading(true);
       if (!id) return;
 
-      const qData = await getBackend<any>(`/api/quizzes/${id}/`);
+      const qData = await getMessagingBackend<any>(`/api/quizzes/${id}/`);
       if (!qData) {
         toast({
           title: "Error",
@@ -189,7 +189,7 @@ export default function EditQuiz() {
         autoDeactivate: qData.auto_deactivate !== false,
       });
 
-      const questionsData = await getBackend<any[]>(`/api/questions/?quiz_id=${id}`);
+      const questionsData = await getMessagingBackend<any[]>(`/api/questions/?quiz_id=${id}`);
       setQuestions(questionsData || []);
     } catch (error: any) {
       console.error("Error loading quiz:", error);

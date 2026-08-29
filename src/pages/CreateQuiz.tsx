@@ -19,7 +19,7 @@ import { LecturerBottomNav } from "@/components/layout/LecturerBottomNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, getMessagingBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 import { DocumentUpload } from "@/components/DocumentUpload";
 import { QuestionReview } from "@/components/QuestionReview";
@@ -178,7 +178,7 @@ export default function CreateQuiz() {
     try {
       if (!user?.uid) return;
 
-      const courseUnitsData = await getBackend<any[]>("/api/course-units/");
+      const courseUnitsData = await getMessagingBackend<any[]>("/api/course-units/");
       const coursesData: CourseOption[] = (courseUnitsData || []).map((course: any) => ({
         id: course.id,
         code: course.code || course.course_unit_code || "Unknown",
@@ -492,7 +492,7 @@ export default function CreateQuiz() {
         }),
       };
 
-      await postBackend("/api/quizzes/", quizPayload);
+      await postMessagingBackend("/api/quizzes/", quizPayload);
 
       toast({
         title: "Success",
