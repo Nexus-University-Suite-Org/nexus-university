@@ -584,7 +584,7 @@ export default function Results() {
                 <Card key={i} className="p-6 animate-pulse h-96 bg-muted/20" />
               ))}
             </div>
-          ) : termResults.length === 0 ? (
+          ) : termResults.length === 0 && quizResults.length === 0 ? (
             <Card className="p-12 text-center">
               <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <p className="text-muted-foreground">
