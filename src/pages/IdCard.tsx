@@ -84,7 +84,7 @@ export default function IdCard() {
       campus: studentData?.college || profile?.college || "Main Campus",
       phone: studentData?.phone || profile?.phone || "+256 700 000 000",
       validThru: studentData?.id_card_valid_thru || "Aug 2026",
-      blood: studentData?.blood_type || "O+",
+
     }),
     [studentData, profile, user],
   );
@@ -228,7 +228,6 @@ export default function IdCard() {
                     <InfoRow label="Year" value={student.year} />
                     <InfoRow label="Campus" value={student.campus} />
                     <InfoRow label="Phone" value={student.phone} />
-                    <InfoRow label="Blood" value={student.blood} />
                   </div>
 
                   <div className="flex items-center justify-between">
