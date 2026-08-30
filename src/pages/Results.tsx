@@ -119,6 +119,11 @@ interface QuizResult {
   completed_at: string;
   time_taken: number;
   status: string;
+  semester?: string;
+  academic_year?: string;
+  year_of_study?: number;
+  course_code?: string;
+  course_title?: string;
 }
 
 interface TermResult {
@@ -130,6 +135,7 @@ interface TermResult {
   entries: Array<
     ExamResultRow & { courseTitle: string; courseCode: string; credits: number }
   >;
+  quizResults: QuizResult[];
 }
 
 const getGradeColor = (grade: string | null | undefined) => {
@@ -200,13 +206,20 @@ export default function Results() {
             const attempts = await quizResp.json();
             // Fetch quiz titles
             const quizIds = [...new Set(attempts.map((a: any) => a.quiz_id))];
-            const quizMap: Record<string, string> = {};
+            const quizMetaMap: Record<string, any> = {};
             for (const qid of quizIds) {
               try {
                 const qResp = await fetch(`${MESSAGING_URL}/api/quizzes/${qid}/`);
                 if (qResp.ok) {
                   const qData = await qResp.json();
-                  quizMap[String(qid)] = qData.title || "Quiz";
+                  quizMetaMap[String(qid)] = {
+                    title: qData.title || "Quiz",
+                    semester: qData.semester,
+                    academic_year: qData.academic_year,
+                    year_of_study: qData.year_of_study,
+                    course_code: qData.course_code,
+                    course_title: qData.course_title,
+                  };
                 }
               } catch {}
             }
@@ -221,6 +234,11 @@ export default function Results() {
               time_taken: a.time_taken,
               passed: a.passed,
               status: a.status,
+              semester: quizMetaMap[String(a.quiz_id)]?.semester,
+              academic_year: quizMetaMap[String(a.quiz_id)]?.academic_year,
+              year_of_study: quizMetaMap[String(a.quiz_id)]?.year_of_study,
+              course_code: quizMetaMap[String(a.quiz_id)]?.course_code,
+              course_title: quizMetaMap[String(a.quiz_id)]?.course_title,
             }));
           }
         } catch {
@@ -245,6 +263,7 @@ export default function Results() {
             cgpa: 0,
             totalCredits: 0,
             entries: [],
+            quizResults: [],
           };
 
           const credits = row.credits || 3;
@@ -257,6 +276,24 @@ export default function Results() {
           existing.totalCredits += credits;
           existing.gpa += gradePoint * credits;
           termMap.set(term, existing);
+        });
+
+        // Add quiz results to their respective terms
+        quizData.forEach((qr: QuizResult) => {
+          if (qr.academic_year && qr.semester) {
+            const term = `${qr.academic_year} · ${qr.semester}`;
+            if (!termMap.has(term)) {
+              termMap.set(term, {
+                term,
+                gpa: 0,
+                cgpa: 0,
+                totalCredits: 0,
+                entries: [],
+                quizResults: [],
+              });
+            }
+            termMap.get(term)!.quizResults.push(qr);
+          }
         });
 
         const terms = Array.from(termMap.values()).map((t) => {
@@ -797,23 +834,85 @@ export default function Results() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Quiz Results for this term */}
+                  {term.quizResults.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wide mb-3">
+                        Quiz Results
+                      </h4>
+                      <div className="grid gap-3">
+                        {term.quizResults.map((quiz) => (
+                          <Card key={quiz.id} className="p-3 bg-muted/20">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{quiz.quiz_title}</p>
+                                {quiz.course_code && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {quiz.course_code} - {quiz.course_title}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(quiz.completed_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm">
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">Score</p>
+                                  <p className="font-bold text-primary">
+                                    {quiz.score}/{quiz.total_points} ({quiz.percentage}%)
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-xs text-muted-foreground">Time</p>
+                                  <p className="font-medium">
+                                    {Math.floor(quiz.time_taken / 60)}:{(quiz.time_taken % 60).toString().padStart(2, "0")}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    quiz.percentage >= 70
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : quiz.percentage >= 50
+                                        ? "bg-amber-100 text-amber-700"
+                                        : "bg-red-100 text-red-700"
+                                  }`}
+                                >
+                                  {quiz.percentage >= 70
+                                    ? "Passed"
+                                    : quiz.percentage >= 50
+                                      ? "Average"
+                                      : "Failed"}
+                                </span>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
 
-              {/* Quiz Results Section */}
-              {quizResults.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="space-y-4"
-                >
-                  <h2 className="text-xl font-bold text-foreground border-b border-border pb-2">
-                    Quiz Results
-                  </h2>
+              {/* Unassigned Quiz Results (no term) */}
+              {(() => {
+                const unassignedQuizzes = quizResults.filter(
+                  (qr) => !qr.academic_year || !qr.semester,
+                );
+                if (unassignedQuizzes.length === 0) return null;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <h2 className="text-xl font-bold text-foreground border-b border-border pb-2">
+                      Quiz Results (Unassigned)
+                    </h2>
 
-                  <div className="grid gap-4">
-                    {quizResults.map((quiz, idx) => (
+                    <div className="grid gap-4">
+                      {unassignedQuizzes.map((quiz, idx) => (
                       <motion.div
                         key={quiz.id}
                         initial={{ opacity: 0, y: 10 }}
@@ -883,7 +982,8 @@ export default function Results() {
                     ))}
                   </div>
                 </motion.div>
-              )}
+                );
+              })()}
             </div>
           )}
         </motion.div>
