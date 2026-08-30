@@ -104,6 +104,7 @@ interface ExamResultRow {
   marks: number;
   grade: string | null;
   grade_point: number | null;
+  credits?: number | null;
   semester_remark?: string;
   remarks?: string | null;
   courses?: ResultCourse;
@@ -119,6 +120,7 @@ interface QuizResult {
   completed_at: string;
   time_taken: number;
   status: string;
+  passed?: boolean;
   semester?: string;
   academic_year?: string;
   year_of_study?: number;
@@ -226,7 +228,7 @@ export default function Results() {
             quizData = attempts.map((a: any) => ({
               id: String(a.id),
               quiz_id: String(a.quiz_id),
-              quiz_title: quizMap[String(a.quiz_id)] || "Quiz",
+              quiz_title: quizMetaMap[String(a.quiz_id)]?.title || "Quiz",
               score: a.score,
               total_points: a.total_points,
               percentage: a.percentage,
@@ -266,12 +268,13 @@ export default function Results() {
             quizResults: [],
           };
 
-          const credits = row.credits || 3;
+          const credits = row.credits ?? row.courses?.credits ?? 3;
           const gradePoint = row.grade_point ?? 0;
           existing.entries.push({
             ...row,
             courseTitle: row.course_title,
             courseCode: row.course_code,
+            credits,
           });
           existing.totalCredits += credits;
           existing.gpa += gradePoint * credits;
