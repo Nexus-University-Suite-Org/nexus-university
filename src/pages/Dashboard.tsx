@@ -243,7 +243,7 @@ export default function Dashboard() {
         setTermResults(terms);
         setCgpa(cgpa);
         setStats({
-          enrolled: gradeList.length > 0 ? gradeList.length : 2,
+          enrolled: gradeList.length,
           completed: 0,
           assignments: 0,
           liveMeets: 0,
@@ -408,14 +408,16 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <ProgressRing progress={72} size={80} strokeWidth={6}>
-              <div className="text-center">
-                <span className="text-lg sm:text-xl font-bold">72%</span>
-                <span className="text-[10px] sm:text-[11px] text-muted-foreground block">
-                  Overall
-                </span>
-              </div>
-            </ProgressRing>
+            {cgpa > 0 && (
+              <ProgressRing progress={Math.round((cgpa / 4) * 100)} size={80} strokeWidth={6}>
+                <div className="text-center">
+                  <span className="text-lg sm:text-xl font-bold">{cgpa.toFixed(1)}</span>
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground block">
+                    CGPA
+                  </span>
+                </div>
+              </ProgressRing>
+            )}
             <div className="space-y-1">
               <p className="text-[10px] sm:text-xs uppercase text-muted-foreground tracking-wide">
                 Live Attendance
