@@ -310,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar_url: null,
         student_number: response.profile.prn ?? null,
         registration_number: response.profile.prn ?? null,
-        department: response.profile.assignedProgramme ?? null,
+        department: response.profile.assignedProgramme || response.profile.programChoice1 || null,
         college: null,
         programme: response.profile.programChoice1 ?? null,
         phone: response.profile.phoneNumber ?? null,
