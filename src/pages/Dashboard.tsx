@@ -198,16 +198,17 @@ export default function Dashboard() {
         const data = await getBackend<DashboardData>(
           `/api/students/${user.uid}/dashboard/`,
           true,
-        );
+        ).catch(() => null);
 
-        setStats(data.stats);
-        setTermResults(data.results.terms);
-        setCgpa(data.results.cgpa);
-        setLiveSessions(data.live_sessions);
-        setUpcomingQuizzes(data.quizzes);
-        setAssignments(data.assignments);
-      } catch (error) {
-        console.error("Error loading dashboard data", error);
+        if (data) {
+          setStats(data.stats);
+          setTermResults(data.results.terms);
+          setCgpa(data.results.cgpa);
+          setLiveSessions(data.live_sessions);
+          setUpcomingQuizzes(data.quizzes);
+          setAssignments(data.assignments);
+        }
+      } catch {
         setAssignmentsError("Failed to load dashboard data.");
       } finally {
         setLoadingStats(false);
