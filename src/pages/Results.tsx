@@ -179,23 +179,30 @@ export default function Results() {
       try {
         setResultsLoading(true);
 
-        const API_BASE_URL =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
         const MESSAGING_URL =
           import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
 
-        // Fetch exam results from NAP-Backend (port 8000)
+        // Fetch student grades from Lecturer-Backend (port 8084)
         let examData: any[] = [];
         try {
           const resp = await fetch(
-            `${API_BASE_URL}/api/students/${user.uid}/results/`
+            `${MESSAGING_URL}/api/student-grades/?student_id=${user.uid}`
           );
           if (resp.ok) {
-            const resultsData = await resp.json();
-            examData = resultsData.exam_results || [];
+            const grades = await resp.json();
+            examData = Array.isArray(grades) ? grades.map((g: any) => ({
+              id: String(g.id),
+              course_id: String(g.course_id),
+              academic_year: g.academic_year || "N/A",
+              semester: g.semester || "1",
+              marks: (g.midterm || 0) + (g.assignment1 || 0) + (g.assignment2 || 0) + (g.final_exam || 0),
+              grade: g.grade,
+              grade_point: g.gp,
+              total: g.total,
+            })) : [];
           }
         } catch {
-          console.log("NAP-Backend unavailable, loading quiz results only");
+          // Student grades unavailable
         }
 
         // Fetch quiz results from Lecturer-Backend (port 8084)
