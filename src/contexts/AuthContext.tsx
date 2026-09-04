@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     studentRecordId: string | null,
   ): Promise<{ otp: string; error: Error | null }> => {
     try {
-      const response = await fetch(`${SPRING_API_URL}/api/v1/auth/otp/send`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     otp: string,
   ): Promise<{ valid: boolean; error: Error | null }> => {
     try {
-      const response = await fetch(`${SPRING_API_URL}/api/v1/auth/otp/verify`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/otp/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
