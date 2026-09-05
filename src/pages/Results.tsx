@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Printer, GraduationCap, QrCode, X } from "lucide-react";
+import { Download, Printer, GraduationCap, QrCode, X, ChevronDown } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
@@ -135,9 +135,162 @@ interface TermResult {
   totalCredits: number;
   remark?: string;
   entries: Array<
-    ExamResultRow & { courseTitle: string; courseCode: string; credits: number }
+    ExamResultRow & {
+      courseTitle: string;
+      courseCode: string;
+      credits: number;
+      breakdown?: ComponentBreakdown | null;
+    }
   >;
   quizResults: QuizResult[];
+}
+
+interface ComponentBreakdown {
+  quizRaw: number | null;
+  quizContrib: number;
+  manualRaw: (number | null)[];
+  manualContrib: number;
+  theoryRaw: number | null;
+  theoryContrib: number;
+  practicalRaw: number | null;
+  practicalContrib: number;
+  total: number;
+  itemLabels: string[];
+  bestN: number;
+  weightSummary: string;
+}
+
+interface SimpleScheme {
+  coursework_weight: number;
+  exam_weight: number;
+  exam_mode: "THEORY" | "THEORY_PRACTICAL";
+  exam_theory_weight: number;
+  exam_practical_weight: number;
+  quiz_weight: number;
+  best_n: number;
+  manual_coursework_items: number;
+  item_labels: string[];
+}
+
+const clamp101 = (v: number) => Math.max(0, Math.min(100, v));
+
+const defaultItemLabels = (n: number) =>
+  Array.from({ length: n }, (_, i) => `Coursework ${i + 1}`);
+
+function parseMarksJson(
+  marksJson: string | null | undefined,
+): { quiz: number | null; manual: (number | null)[]; theory: number | null; practical: number | null } | null {
+  if (!marksJson) return null;
+  try {
+    const p = JSON.parse(marksJson);
+    return {
+      quiz: typeof p.quiz === "number" ? p.quiz : null,
+      manual: Array.isArray(p.manual)
+        ? p.manual.map((m: any) =>
+            typeof m === "number"
+              ? m
+              : m?.score != null
+                ? Number(m.score)
+                : null,
+          )
+        : [],
+      theory: typeof p.theory === "number" ? p.theory : null,
+      practical: typeof p.practical === "number" ? p.practical : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseScheme(raw: any): SimpleScheme | null {
+  if (!raw || typeof raw !== "object" || Object.keys(raw).length === 0)
+    return null;
+  let labels: string[] = [];
+  try {
+    labels =
+      typeof raw.item_labels === "string"
+        ? JSON.parse(raw.item_labels)
+        : Array.isArray(raw.item_labels)
+          ? raw.item_labels
+          : [];
+  } catch {
+    labels = [];
+  }
+  const count = Math.max(1, Number(raw.manual_coursework_items ?? 1) || 1);
+  return {
+    coursework_weight: Number(raw.coursework_weight ?? 0) || 0,
+    exam_weight: Number(raw.exam_weight ?? 0) || 0,
+    exam_mode:
+      raw.exam_mode === "THEORY_PRACTICAL" ? "THEORY_PRACTICAL" : "THEORY",
+    exam_theory_weight: Number(raw.exam_theory_weight ?? 0) || 0,
+    exam_practical_weight: Number(raw.exam_practical_weight ?? 0) || 0,
+    quiz_weight: Number(raw.quiz_weight ?? 0) || 0,
+    best_n: Math.max(1, Number(raw.best_n ?? 1) || 1),
+    manual_coursework_items: count,
+    item_labels:
+      labels.length >= count
+        ? labels.slice(0, count)
+        : defaultItemLabels(count),
+  };
+}
+
+function computeBreakdown(
+  scheme: SimpleScheme | null,
+  marksJson: string | null | undefined,
+): ComponentBreakdown | null {
+  const marks = parseMarksJson(marksJson);
+  if (!marks) return null;
+
+  const qw = scheme?.quiz_weight || 0;
+  const cw = scheme?.coursework_weight || 0;
+  const theoryW = scheme?.exam_theory_weight || 0;
+  const practicalW =
+    scheme?.exam_mode === "THEORY_PRACTICAL"
+      ? scheme?.exam_practical_weight || 0
+      : 0;
+  const m = scheme?.manual_coursework_items || 0;
+  const k = Math.max(1, scheme?.best_n || 1);
+
+  const quizContrib =
+    qw > 0 && marks.quiz != null ? (qw / 100) * clamp101(marks.quiz) : 0;
+
+  let manualContrib = 0;
+  const share = m > 0 ? Math.max(0, cw - qw) / k : 0;
+  if (share > 0 && m > 0) {
+    const values = marks.manual.slice(0, m).map((v) => clamp101(v ?? 0));
+    manualContrib =
+      (share / 100) *
+      [...values]
+        .sort((a, b) => b - a)
+        .slice(0, k)
+        .reduce((s, x) => s + x, 0);
+  }
+
+  const theoryContrib =
+    theoryW > 0 ? (theoryW / 100) * clamp101(marks.theory ?? 0) : 0;
+  const practicalContrib =
+    practicalW > 0 ? (practicalW / 100) * clamp101(marks.practical ?? 0) : 0;
+
+  return {
+    quizRaw: qw > 0 ? marks.quiz : null,
+    quizContrib,
+    manualRaw: marks.manual.slice(0, m),
+    manualContrib,
+    theoryRaw: theoryW > 0 ? marks.theory : null,
+    theoryContrib,
+    practicalRaw: practicalW > 0 ? marks.practical : null,
+    practicalContrib,
+    total: quizContrib + manualContrib + theoryContrib + practicalContrib,
+    itemLabels: scheme?.item_labels || defaultItemLabels(m),
+    bestN: scheme?.best_n || 1,
+    weightSummary: scheme
+      ? `CW ${scheme.coursework_weight}% / Exam ${scheme.exam_weight}%` +
+        (scheme.quiz_weight > 0 ? ` · quiz ${scheme.quiz_weight}%` : "") +
+        (scheme.exam_mode === "THEORY_PRACTICAL"
+          ? ` · T${scheme.exam_theory_weight}/P${scheme.exam_practical_weight}`
+          : ` · T${scheme.exam_theory_weight}`)
+      : "",
+  };
 }
 
 const getGradeColor = (grade: string | null | undefined) => {
@@ -169,6 +322,7 @@ export default function Results() {
   const [cgpa, setCgpa] = useState(0);
   const [showQRModal, setShowQRModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -182,35 +336,114 @@ export default function Results() {
         const MESSAGING_URL =
           import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
 
-        // Fetch student grades from Lecturer-Backend (port 8084)
-        let examData: any[] = [];
+        // Resolve the 8084 student id from the logged-in email.
+        // user.uid is a NAP user id, not the Lecturer-Backend student id.
+        let uid: string | null = null;
         try {
-          const resp = await fetch(
-            `${MESSAGING_URL}/api/student-grades/?student_id=${user.uid}`
-          );
-          if (resp.ok) {
-            const grades = await resp.json();
-            examData = Array.isArray(grades) ? grades.map((g: any) => ({
-              id: String(g.id),
-              course_id: String(g.course_id),
-              academic_year: g.academic_year || "N/A",
-              semester: g.semester || "1",
-              marks: (g.midterm || 0) + (g.assignment1 || 0) + (g.assignment2 || 0) + (g.final_exam || 0),
-              grade: g.grade,
-              grade_point: g.gp,
-              total: g.total,
-            })) : [];
+          const profResp = await fetch(`${MESSAGING_URL}/api/profiles/`);
+          if (profResp.ok) {
+            const profiles = await profResp.json();
+            const arr = Array.isArray(profiles) ? profiles : [];
+            const match = arr.find(
+              (p: any) =>
+                p.email &&
+                String(p.email).toLowerCase() ===
+                  String(user.email || "").toLowerCase(),
+            );
+            if (match?.id != null) uid = String(match.id);
           }
         } catch {
-          // Student grades unavailable
+          // Profile lookup unavailable
+        }
+
+        // Course units for course names / codes / credits
+        let courseUnitsMap: Record<string, any> = {};
+        try {
+          const cuResp = await fetch(`${MESSAGING_URL}/api/course-units/`);
+          if (cuResp.ok) {
+            const units = await cuResp.json();
+            (Array.isArray(units) ? units : []).forEach((u: any) => {
+              if (u.id != null) courseUnitsMap[String(u.id)] = u;
+            });
+          }
+        } catch {
+          // Course units unavailable
+        }
+
+        // Fetch student grades from Lecturer-Backend (port 8084)
+        let examData: any[] = [];
+        if (uid) {
+          try {
+            const resp = await fetch(
+              `${MESSAGING_URL}/api/student-grades/?student_id=${uid}`,
+            );
+            if (resp.ok) {
+              const grades = await resp.json();
+              examData = Array.isArray(grades)
+                ? grades.map((g: any) => ({
+                    id: String(g.id),
+                    course_id: String(g.course_id),
+                    academic_year: g.academic_year || "N/A",
+                    semester: g.semester || "1",
+                    course_code:
+                      courseUnitsMap[String(g.course_id)]?.code ||
+                      g.course_code ||
+                      "",
+                    course_title:
+                      courseUnitsMap[String(g.course_id)]?.name ||
+                      g.course_title ||
+                      "Unknown Course",
+                    credits:
+                      courseUnitsMap[String(g.course_id)]?.credits ??
+                      g.credits ??
+                      3,
+                    marks: Number(g.total) || 0,
+                    grade: g.grade,
+                    grade_point: g.gp,
+                    total: g.total,
+                    marks_json: g.marks_json,
+                  }))
+                : [];
+            }
+          } catch {
+            // Student grades unavailable
+          }
+        }
+        if (examData.length > 0) {
+          // Fetch grading schemes per course (for component breakdown)
+          const schemesMap: Record<string, SimpleScheme | null> = {};
+          const distinctCourses = [
+            ...new Set(examData.map((g: any) => g.course_id)),
+          ];
+          for (const cid of distinctCourses) {
+            try {
+              const sResp = await fetch(
+                `${MESSAGING_URL}/api/gradebook-schemes/${cid}/`,
+              );
+              if (sResp.ok) {
+                const raw = await sResp.json();
+                schemesMap[String(cid)] = parseScheme(raw);
+              }
+            } catch {
+              // Scheme unavailable
+            }
+          }
+          examData = examData.map((g: any) => ({
+            ...g,
+            breakdown: computeBreakdown(
+              schemesMap[String(g.course_id)] || null,
+              g.marks_json,
+            ),
+          }));
         }
 
         // Fetch quiz results from Lecturer-Backend (port 8084)
         let quizData: any[] = [];
-        try {
-          const quizResp = await fetch(
-            `${MESSAGING_URL}/api/quiz-attempts/?student_id=${user.uid}`
-          );
+        if (uid) {
+          try {
+            const quizResp = await fetch(
+              `${MESSAGING_URL}/api/quiz-attempts/?student_id=${uid}`
+            );
           if (quizResp.ok) {
             const attempts = await quizResp.json();
             // Fetch quiz titles
@@ -252,6 +485,7 @@ export default function Results() {
           }
         } catch {
           console.log("Failed to fetch quiz results");
+        }
         }
 
         if (examData.length === 0) {
@@ -816,6 +1050,110 @@ export default function Results() {
                       </div>
                     </Card>
                   </div>
+
+                  {/* Component Breakdown */}
+                  {term.entries.some((e) => e.breakdown) && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setBreakdownOpen(
+                            breakdownOpen === term.term ? null : term.term,
+                          )
+                        }
+                        className="inline-flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wide hover:underline"
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            breakdownOpen === term.term ? "rotate-180" : ""
+                          }`}
+                        />
+                        How my marks were calculated
+                      </button>
+                    </div>
+                  )}
+                  {breakdownOpen === term.term && (
+                    <Card className="p-4 border">
+                      <div className="overflow-x-auto">
+                        {term.entries
+                          .filter((e) => e.breakdown)
+                          .map((course) => (
+                            <div
+                              key={course.id}
+                              className="py-3 border-b border-border/30 last:border-0"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-xs font-bold font-mono uppercase tracking-wide text-primary">
+                                  {course.courseCode} · {course.courseTitle}
+                                </p>
+                                <p className="text-xs text-muted-foreground font-medium">
+                                  {course.breakdown!.weightSummary}
+                                </p>
+                              </div>
+                              <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                                <div className="p-2 bg-muted/30 rounded-lg">
+                                  <p className="text-muted-foreground font-medium">
+                                    {course.breakdown!.quizRaw != null
+                                      ? "Quiz"
+                                      : "No quiz"}
+                                  </p>
+                                  <p className="font-bold mt-1">
+                                    {course.breakdown!.quizRaw != null
+                                      ? `${course.breakdown!.quizRaw.toFixed(1)}% → ${course.breakdown!.quizContrib.toFixed(1)}`
+                                      : "—"}
+                                  </p>
+                                </div>
+                                <div className="p-2 bg-muted/30 rounded-lg">
+                                  <p className="text-muted-foreground font-medium truncate">
+                                    CW best{" "}
+                                    {Math.min(
+                                      course.breakdown!.bestN,
+                                      course.breakdown!.manualRaw.length,
+                                    )}{" "}
+                                    of {course.breakdown!.manualRaw.length}
+                                  </p>
+                                  <p className="font-bold mt-1">
+                                    {course.breakdown!.manualRaw.length > 0
+                                      ? `${course.breakdown!.manualContrib.toFixed(1)}`
+                                      : "—"}
+                                  </p>
+                                </div>
+                                <div className="p-2 bg-muted/30 rounded-lg">
+                                  <p className="text-muted-foreground font-medium">
+                                    Theory
+                                  </p>
+                                  <p className="font-bold mt-1">
+                                    {course.breakdown!.theoryRaw != null
+                                      ? `${course.breakdown!.theoryRaw.toFixed(1)}% → ${course.breakdown!.theoryContrib.toFixed(1)}`
+                                      : "—"}
+                                  </p>
+                                </div>
+                                <div className="p-2 bg-muted/30 rounded-lg">
+                                  <p className="text-muted-foreground font-medium">
+                                    {course.breakdown!.practicalRaw != null
+                                      ? "Practical"
+                                      : "Practical"}
+                                  </p>
+                                  <p className="font-bold mt-1">
+                                    {course.breakdown!.practicalRaw != null
+                                      ? `${course.breakdown!.practicalRaw.toFixed(1)}% → ${course.breakdown!.practicalContrib.toFixed(1)}`
+                                      : "—"}
+                                  </p>
+                                </div>
+                                <div className="p-2 bg-primary/10 rounded-lg sm:col-start-5">
+                                  <p className="text-muted-foreground font-medium">
+                                    Weighted total
+                                  </p>
+                                  <p className="font-bold text-primary text-sm mt-1">
+                                    {course.breakdown!.total.toFixed(1)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </Card>
+                  )}
 
                   {/* Semester Summary */}
                   <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-4 text-sm bg-muted/30 rounded-lg p-4">

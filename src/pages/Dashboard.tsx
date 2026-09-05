@@ -28,7 +28,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -37,7 +36,7 @@ import { UpcomingCard } from "@/components/dashboard/UpcomingCard";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMessagingBackend, postBackend } from "@/lib/backendApi";
+import { getMessagingBackend, MESSAGING_API_BASE_URL } from "@/lib/backendApi";
 
 type ResultCourse = {
   title: string;
@@ -83,6 +82,7 @@ interface LiveSession {
   scheduledAt: string;
   durationMinutes?: number | null;
   meetLink?: string | null;
+  imageUrl?: string | null;
   isLive: boolean;
 }
 
@@ -128,10 +128,6 @@ export default function Dashboard() {
   const [termResults, setTermResults] = useState<TermResult[]>([]);
   const [cgpa, setCgpa] = useState(0);
   const [showClassDialog, setShowClassDialog] = useState(false);
-  const [classAction, setClassAction] = useState<"join" | "create">("join");
-  const [joinCode, setJoinCode] = useState("");
-  const [className, setClassName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignments, setAssignments] = useState<DashboardAssignment[]>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
@@ -195,12 +191,15 @@ export default function Dashboard() {
         setLiveSessionsLoading(true);
         setQuizzesLoading(true);
 
-        // Fetch grades, quizzes, quiz attempts, enrollments in parallel
-        const [gradesData, quizzesData, attemptsData] = await Promise.all([
-          getMessagingBackend<any[]>(`/api/student-grades/?student_id=${user.uid}`).catch(() => []),
-          getMessagingBackend<any[]>("/api/quizzes/?status=active").catch(() => []),
-          getMessagingBackend<any[]>(`/api/quiz-attempts/?student_id=${user.uid}`).catch(() => []),
-        ]);
+        // Fetch grades, quizzes, quiz attempts, live sessions in parallel
+        const [gradesData, quizzesData, attemptsData, sessionsData, enrollmentsData] =
+          await Promise.all([
+            getMessagingBackend<any[]>(`/api/student-grades/?student_id=${user.uid}`).catch(() => []),
+            getMessagingBackend<any[]>("/api/quizzes/?status=active").catch(() => []),
+            getMessagingBackend<any[]>(`/api/quiz-attempts/?student_id=${user.uid}`).catch(() => []),
+            getMessagingBackend<any[]>("/api/live-sessions/").catch(() => []),
+            getMessagingBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`).catch(() => []),
+          ]);
 
         // Build term results from student grades
         const gradeList: any[] = Array.isArray(gradesData) ? gradesData : [];
@@ -242,8 +241,11 @@ export default function Dashboard() {
 
         setTermResults(terms);
         setCgpa(cgpa);
+        const approvedEnrollments = (Array.isArray(enrollmentsData) ? enrollmentsData : []).filter(
+          (e: any) => e.status === "approved",
+        );
         setStats({
-          enrolled: gradeList.length,
+          enrolled: approvedEnrollments.length,
           completed: 0,
           assignments: 0,
           liveMeets: 0,
@@ -263,6 +265,38 @@ export default function Dashboard() {
             isScheduled: q.status === "scheduled",
           })),
         );
+
+        // Build scheduled Google Meet classes
+        const now = new Date();
+        const sessionList: LiveSession[] = (
+          Array.isArray(sessionsData) ? sessionsData : []
+        )
+          .map((s: any) => {
+            const start = new Date(s.scheduled_at);
+            const duration = (s.duration_minutes ?? 60) * 60000;
+            const end = new Date(start.getTime() + duration);
+            return {
+              id: String(s.id),
+              title: s.title || "Online Class",
+              courseName: s.course_name || null,
+              scheduledAt: s.scheduled_at,
+              durationMinutes: s.duration_minutes ?? null,
+              meetLink: s.meet_link || null,
+              imageUrl: s.image_url || null,
+              isLive:
+                !Number.isNaN(start.getTime()) && now >= start && now <= end,
+            } as LiveSession;
+          })
+          .sort(
+            (a, b) =>
+              new Date(a.scheduledAt).getTime() -
+              new Date(b.scheduledAt).getTime(),
+          );
+        setLiveSessions(sessionList);
+        setStats((prev) => ({
+          ...prev,
+          liveMeets: sessionList.filter((s) => s.isLive).length,
+        }));
       } catch {
         // Dashboard gracefully degrades — show empty state
       } finally {
@@ -310,72 +344,8 @@ export default function Dashboard() {
     [liveSessions],
   );
 
-  const handleJoinClass = async () => {
-    if (!joinCode.trim()) {
-      alert("Please enter a valid join code");
-      return;
-    }
-
-    if (!user) {
-      alert("You must be logged in to join a class");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await postBackend(
-        "/api/classrooms/join/",
-        {
-          join_code: joinCode.trim(),
-          student_id: user.uid,
-        },
-        true,
-      );
-
-      alert("Successfully joined the class!");
-      setShowClassDialog(false);
-      setJoinCode("");
-      window.location.reload();
-    } catch (error: any) {
-      alert(error.message || "Failed to join class. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCreateClass = async () => {
-    if (!className.trim()) {
-      alert("Please enter a class name");
-      return;
-    }
-
-    if (!user) {
-      alert("You must be logged in to create a class");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await postBackend<{ join_code: string; name: string }>(
-        "/api/classrooms/",
-        {
-          name: className.trim(),
-          instructor_id: user.uid,
-        },
-        true,
-      );
-
-      alert(
-        `Class "${result.name}" created successfully!\nClass Code: ${result.join_code}`,
-      );
-      setShowClassDialog(false);
-      setClassName("");
-      window.location.reload();
-    } catch (error: any) {
-      alert(error.message || "Failed to create class. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleOpenMeet = (link?: string | null) => {
+    if (link) window.open(link, "_blank");
   };
 
   return (
@@ -462,7 +432,6 @@ export default function Dashboard() {
             subtitle="Happening now"
             icon={Video}
             delay={0.4}
-            trend={{ value: stats.liveMeets, isPositive: true }}
           />
         </div>
 
@@ -616,7 +585,7 @@ export default function Dashboard() {
                 className="flex items-center gap-2 text-xs sm:text-sm text-secondary hover:text-secondary/80 transition-colors cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
-                Join or create class
+                Join a class
               </button>
             </div>
 
@@ -636,7 +605,19 @@ export default function Dashboard() {
                   transition={{ delay: i * 0.05 }}
                   className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 backdrop-blur-lg shadow-lg"
                 >
-                  <div className="h-20 sm:h-24 w-full bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 opacity-90" />
+                  {session.imageUrl ? (
+                    <img
+                      src={
+                        session.imageUrl.startsWith("http")
+                          ? session.imageUrl
+                          : `${MESSAGING_API_BASE_URL}${session.imageUrl}`
+                      }
+                      alt={session.title}
+                      className="h-32 sm:h-36 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-20 sm:h-24 w-full bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 opacity-90" />
+                  )}
                   <div className="p-4 sm:p-5 space-y-3 -mt-8 sm:-mt-10 relative">
                     <div className="flex items-center justify-between">
                       <div>
@@ -997,98 +978,58 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Join or Create Class Dialog */}
+      {/* Join Class Dialog */}
       <Dialog open={showClassDialog} onOpenChange={setShowClassDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Join or Create a Class</DialogTitle>
+            <DialogTitle>Join a Class</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Toggle between Join and Create */}
-            <div className="flex gap-2 bg-muted p-1 rounded-lg">
-              <button
-                onClick={() => {
-                  setClassAction("join");
-                  setJoinCode("");
-                  setClassName("");
-                }}
-                className={`flex-1 py-2 rounded-md font-medium transition-colors ${
-                  classAction === "join"
-                    ? "bg-white text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Join Class
-              </button>
-              <button
-                onClick={() => {
-                  setClassAction("create");
-                  setJoinCode("");
-                  setClassName("");
-                }}
-                className={`flex-1 py-2 rounded-md font-medium transition-colors ${
-                  classAction === "create"
-                    ? "bg-white text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Create Class
-              </button>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              {formattedLiveSessions.length === 0 && !liveSessionsLoading && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No Google Meet classes are available right now. When your
+                  lecturers schedule a class, it will appear here with a join
+                  link.
+                </p>
+              )}
+              {liveSessionsLoading && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Loading classes…
+                </p>
+              )}
+              {formattedLiveSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="rounded-xl border border-border/60 bg-muted/30 p-3 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">
+                      {session.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {session.courseName || "Online Class"} ·{" "}
+                      {session.displayTime}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {session.isLive && (
+                      <span className="text-[10px] font-semibold text-destructive flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 bg-destructive rounded-full animate-pulse" />{" "}
+                        Live
+                      </span>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenMeet(session.meetLink)}
+                      disabled={!session.meetLink}
+                    >
+                      <Video className="h-4 w-4" /> Join
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* Join Class Form */}
-            {classAction === "join" && (
-              <div className="grid gap-3">
-                <div>
-                  <label className="text-sm font-medium text-foreground">
-                    Class Code
-                  </label>
-                  <Input
-                    placeholder="Enter the class code (e.g., abc-1234-xyz)"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value)}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Ask your instructor for the class code to join
-                  </p>
-                </div>
-                <Button
-                  onClick={handleJoinClass}
-                  className="w-full mt-4"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Joining..." : "Join Class"}
-                </Button>
-              </div>
-            )}
-
-            {/* Create Class Form */}
-            {classAction === "create" && (
-              <div className="grid gap-3">
-                <div>
-                  <label className="text-sm font-medium text-foreground">
-                    Class Name
-                  </label>
-                  <Input
-                    placeholder="Enter class name (e.g., Advanced Data Structures)"
-                    value={className}
-                    onChange={(e) => setClassName(e.target.value)}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Give your class a clear, descriptive name
-                  </p>
-                </div>
-                <Button
-                  onClick={handleCreateClass}
-                  className="w-full mt-4"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Creating..." : "Create Class"}
-                </Button>
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>

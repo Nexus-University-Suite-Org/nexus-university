@@ -24,7 +24,6 @@ interface StudentSidebarProps {
 
 const studentNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: Zap },
-  { label: "Programs", href: "/programs", icon: BookOpen },
   { label: "Calendar", href: "/academic-calendar", icon: Calendar },
   { label: "Announcements", href: "/announcements", icon: Megaphone },
   { label: "Assignments", href: "/assignments", icon: Clipboard },

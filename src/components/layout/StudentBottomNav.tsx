@@ -6,7 +6,6 @@ import {
   Calendar,
   User,
   Clipboard,
-  GraduationCap,
   Settings,
   Mail,
   LogOut,
@@ -17,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 
 const studentNavItems = [
   { label: "Home", href: "/dashboard", icon: Home },
-  { label: "Programs", href: "/programs", icon: GraduationCap },
   { label: "Calendar", href: "/academic-calendar", icon: Calendar },
   { label: "Assignments", href: "/assignments", icon: Clipboard },
   { label: "Quiz", href: "/quiz", icon: BookOpen },

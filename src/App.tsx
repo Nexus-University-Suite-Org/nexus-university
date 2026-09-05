@@ -40,7 +40,7 @@ import QuizResults from "./pages/QuizResults";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentQuiz from "./pages/StudentQuiz";
 import Announcements from "./pages/Announcements";
-import Programs from "./pages/Programs";
+
 import NotFound from "./pages/NotFound";
 import IdCard from "./pages/IdCard";
 import AcademicCalendar from "./pages/AcademicCalendar";
@@ -291,14 +291,6 @@ function AppRoutes() {
           <StudentRoute>
             <StudentQuiz />
           </StudentRoute>
-        }
-      />
-      <Route
-        path="/programs"
-        element={
-          <ProtectedRoute>
-            <Programs />
-          </ProtectedRoute>
         }
       />
       <Route

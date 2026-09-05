@@ -28,6 +28,39 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
+function academicStartYear(): number {
+  const now = new Date();
+  return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+function computeYearOfStudy(
+  startDate?: string,
+  academicYear?: string,
+): number {
+  let startYear: number | null = null;
+  const ay = (academicYear || "").trim();
+  const ayMatch = ay.match(/^\d{4}/);
+  if (ayMatch) startYear = parseInt(ayMatch[0], 10);
+  if (startYear == null && startDate) {
+    const sd = startDate.match(/\d{4}/);
+    if (sd) startYear = parseInt(sd[0], 10);
+  }
+  if (startYear == null) return 1;
+  return Math.max(1, academicStartYear() - startYear + 1);
+}
+
+function cardValidThru(startDate?: string, academicYear?: string): string {
+  let startYear: number | null = null;
+  const ay = (academicYear || "").trim();
+  const ayMatch = ay.match(/^\d{4}/);
+  if (ayMatch) startYear = parseInt(ayMatch[0], 10);
+  if (startYear == null && startDate) {
+    const sd = startDate.match(/\d{4}/);
+    if (sd) startYear = parseInt(sd[0], 10);
+  }
+  return `Aug ${(startYear ?? academicStartYear()) + 1}`;
+}
+
 export default function IdCard() {
   const { user, profile } = useAuth();
   const [studentData, setStudentData] = useState<any>(null);
@@ -42,7 +75,7 @@ export default function IdCard() {
           import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
         const resp = await fetch(
-          `${API_BASE_URL}/api/students/${user.uid}/profile/`
+          `${API_BASE_URL}/api/v1/applications/${user.uid}`
         );
         if (!resp.ok) throw new Error("Failed to fetch profile");
 
@@ -60,34 +93,47 @@ export default function IdCard() {
     fetchStudentProfile();
   }, [user?.uid]);
 
-  const student = useMemo(
-    () => ({
+  const student = useMemo(() => {
+    const fullName = studentData
+      ? [studentData.firstName, studentData.otherNames, studentData.lastName]
+          .filter(Boolean)
+          .join(" ")
+      : null;
+    const programme =
+      studentData?.assignedProgramme || studentData?.programChoice1 || null;
+    const yearOfStudy = studentData
+      ? computeYearOfStudy(studentData.startDate, studentData.academicYear)
+      : null;
+    return {
       name:
-        studentData?.full_name ||
+        fullName ||
         profile?.full_name ||
         user?.displayName ||
         "Student Name",
       program:
-        studentData?.programme ||
+        programme ||
         profile?.programme ||
         profile?.department ||
         "Bachelor of Science in Computer Science",
       studentNumber:
-        studentData?.student_number ||
+        studentData?.prn ||
         profile?.student_number ||
         "NU-2026-00123",
       registrationNumber:
-        studentData?.registration_number ||
+        studentData?.prn ||
         profile?.registration_number ||
         "2026/HD07/12345/PS",
-      year: studentData?.year || "Year 2",
-      campus: studentData?.college || profile?.college || "Main Campus",
-      phone: studentData?.phone || profile?.phone || "+256 700 000 000",
-      validThru: studentData?.id_card_valid_thru || "Aug 2026",
-
-    }),
-    [studentData, profile, user],
-  );
+      year: yearOfStudy ? `Year ${yearOfStudy}` : "Year 1",
+      campus: studentData ? "Main Campus" : profile?.college || "Main Campus",
+      phone:
+        studentData?.phoneNumber ||
+        profile?.phone ||
+        "+256 700 000 000",
+      validThru: studentData
+        ? cardValidThru(studentData.startDate, studentData.academicYear)
+        : "Aug 2026",
+    };
+  }, [studentData, profile, user]);
 
   const handlePrint = () => window.print();
 
