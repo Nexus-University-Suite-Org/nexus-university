@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend } from "@/lib/backendApi";
+import { getBackend, getNadBackend } from "@/lib/backendApi";
 
 interface Program {
   id: number;
@@ -82,6 +82,71 @@ interface Course {
   credits: number;
   type: string;
   prerequisites?: string;
+}
+
+interface NadAdmission {
+  applicationId: number | string;
+  prn: string | null;
+  registrationNumber: string | null;
+  studentNumber: string | null;
+  fullName: string | null;
+  email: string | null;
+  programChoice1: string | null;
+  programChoice2: string | null;
+  programChoice3: string | null;
+  programChoice4: string | null;
+  assignedProgramme: string | null;
+  studyMode: string | null;
+  academicYear: string | null;
+  semester: string | null;
+  startDate: string | null;
+  status: string | null;
+  reviewStatus: string | null;
+  feeRequired: string | null;
+  feePaid: string | null;
+  feeCurrency: string | null;
+}
+
+// Mirrors the NAD Admissions Dashboard backend's /api/v1/public/students/{identifier}/programme payload.
+interface NadStudentProgramme {
+  admission: NadAdmission;
+  admittedProgramme: string | null;
+  id: number | null;
+  programName: string;
+  programCode: string | null;
+  programType: string | null;
+  awardQualification: string | null;
+  programDescription: string | null;
+  programObjectives: string | null;
+  learningOutcomes: string | null;
+  careerOpportunities: string | null;
+  status: string | null;
+  facultySchool: string | null;
+  department: string | null;
+  programCoordinator: string | null;
+  campus: string | null;
+  duration: number | null;
+  durationUnit: string | null;
+  numberOfYears: number | null;
+  numberOfSemesters: number | null;
+  semestersPerYear: number | null;
+  totalCreditUnits: number | null;
+  studyMode: string | null;
+  academicCalendar: string | null;
+  fees: string | null;
+  admissionRequirements: string | null;
+  curriculum: string | null;
+  intakes: string | null;
+  studyOptions: string | null;
+  accreditation: string | null;
+  shortDescription: string | null;
+  cutoffScore: number | null;
+  essentialSubjects: string | null;
+  relevantSubjects: string | null;
+  desirableSubjects: string | null;
+  minimumUcePasses: number | null;
+  capacity: number | null;
+  intakeYear: string | null;
 }
 
 interface RecessTerm {
@@ -198,34 +263,95 @@ export function MyProgrammeTab() {
     const fetchProgrammeData = async () => {
       const programmeName = profile?.programme || profile?.department || "";
       try {
-        // ---- Resolve the student's programme from NAP (shared program records) ----
+        // ---- Resolve the student's programme from the NAD Admissions Dashboard (source of truth) ----
         let resolvedProgram: Program | null = null;
-        try {
-          const programs = (await getBackend<any[]>("/api/v1/programs")) || [];
-          const normalized = programmeName.trim().toLowerCase();
-          const match =
-            programs.find(
-              (p: any) =>
-                (p.programName || "").toLowerCase() === normalized ||
-                (p.programCode || "").toLowerCase() === normalized ||
-                (p.programName || "").toLowerCase().includes(normalized) ||
-                (p.programCode || "").toLowerCase().includes(normalized),
-            ) ||
-            programs.find((p: any) => p.status === "Active") ||
-            programs[0];
+        let nadAdmission: NadAdmission | null = null;
 
-          if (match) {
-            const detail = await getBackend<any>(`/api/v1/programs/${match.id}`);
-            resolvedProgram = detail && detail.id ? detail : match;
+        const studentIdentifier =
+          profile?.registration_number || profile?.student_number || user?.uid || "";
+
+        if (studentIdentifier) {
+          try {
+            const nad = await getNadBackend<NadStudentProgramme>(
+              `/api/v1/public/students/${encodeURIComponent(studentIdentifier)}/programme`,
+            );
+            if (nad && nad.programName) {
+              nadAdmission = nad.admission ?? null;
+              resolvedProgram = {
+                id: nad.id ?? 0,
+                programName: nad.programName,
+                programCode: nad.programCode ?? "",
+                programType: nad.programType ?? "",
+                awardQualification: nad.awardQualification ?? "",
+                programDescription: nad.programDescription ?? "",
+                programObjectives: nad.programObjectives ?? "",
+                learningOutcomes: nad.learningOutcomes ?? "",
+                careerOpportunities: nad.careerOpportunities ?? "",
+                status: nad.status ?? "Active",
+                facultySchool: nad.facultySchool ?? "",
+                department: nad.department ?? "",
+                programCoordinator: nad.programCoordinator ?? "",
+                campus: nad.campus ?? nad.admission?.studyMode ?? "",
+                duration: nad.duration ?? 0,
+                durationUnit: nad.durationUnit ?? "",
+                numberOfYears: nad.numberOfYears ?? 3,
+                numberOfSemesters: nad.numberOfSemesters ?? 0,
+                semestersPerYear: nad.semestersPerYear ?? 2,
+                totalCreditUnits: nad.totalCreditUnits ?? 0,
+                studyMode: nad.studyMode ?? nad.admission?.studyMode ?? "",
+                academicCalendar: nad.academicCalendar ?? "",
+                fees: nad.fees ?? null,
+                admissionRequirements: nad.admissionRequirements ?? null,
+                curriculum: nad.curriculum ?? null,
+                intakes: nad.intakes ?? null,
+                studyOptions: nad.studyOptions ?? null,
+                accreditation: nad.accreditation ?? null,
+                shotDescription: nad.shortDescription ?? undefined,
+                cutoffScore: nad.cutoffScore ?? 0,
+                minimumUcePasses: nad.minimumUcePasses ?? 0,
+                capacity: nad.capacity ?? 0,
+                intakeYear: nad.intakeYear ?? nad.admission?.academicYear ?? "",
+              };
+            }
+          } catch (err) {
+            console.error("NAD programme fetch failed, falling back to NAP:", err);
           }
-        } catch (err) {
-          console.error("Error resolving program:", err);
+        }
+
+        // ---- Fallback: resolve the student's programme from NAP (shared program records) ----
+        if (!resolvedProgram) {
+          try {
+            const programs = (await getBackend<any[]>("/api/v1/programs")) || [];
+            const normalized = programmeName.trim().toLowerCase();
+            const match =
+              programs.find(
+                (p: any) =>
+                  (p.programName || "").toLowerCase() === normalized ||
+                  (p.programCode || "").toLowerCase() === normalized ||
+                  (p.programName || "").toLowerCase().includes(normalized) ||
+                  (p.programCode || "").toLowerCase().includes(normalized),
+              ) ||
+              programs.find((p: any) => p.status === "Active") ||
+              programs[0];
+
+            if (match) {
+              const detail = await getBackend<any>(`/api/v1/programs/${match.id}`);
+              resolvedProgram = detail && detail.id ? detail : match;
+            }
+          } catch (err) {
+            console.error("Error resolving program:", err);
+          }
         }
 
         if (resolvedProgram) {
           setProgram(resolvedProgram);
           const years = resolvedProgram.numberOfYears || 3;
           const startYear = new Date().getFullYear();
+          const intake =
+            resolvedProgram.intakeYear ||
+            parseIntakeYear(resolvedProgram.intakes) ||
+            nadAdmission?.academicYear ||
+            "Not specified";
           setProgrammeInfo({
             name: resolvedProgram.programName || programmeName || "Loading...",
             code: resolvedProgram.programCode || "—",
@@ -237,26 +363,27 @@ export function MyProgrammeTab() {
                 : "years"
             }`,
             duration_years: years,
-            intake:
-              resolvedProgram.intakeYear ||
-              parseIntakeYear(resolvedProgram.intakes) ||
-              "Not specified",
+            intake,
             expectedGraduation: `${startYear + years}/${String(
               (startYear + years + 1) % 100,
             ).padStart(2, "0")}`,
             mode: resolvedProgram.studyMode || "Full-time",
             campus: resolvedProgram.campus || "Main Campus",
             coordinator: resolvedProgram.programCoordinator || "—",
-            awards: resolvedProgram.awardQualification || resolvedProgram.programType || "—",
+            awards:
+              resolvedProgram.awardQualification ||
+              resolvedProgram.programType ||
+              nadAdmission?.assignedProgramme ||
+              "—",
           });
           setProgrammeData((prev) => ({ ...prev, totalYears: years }));
         }
 
         // ---- Keep GPA / progress from grades ----
-        let targetCourseId = profile.course_id;
+        let targetCourseId = profile?.course_id;
         let resolvedTotalYears = 3;
 
-        if (!targetCourseId && profile.programme) {
+        if (!targetCourseId && profile?.programme) {
           try {
             const courses = await getBackend<any[]>(
               `/api/courses/?name=${encodeURIComponent(profile.programme)}`,
@@ -286,8 +413,8 @@ export function MyProgrammeTab() {
         const safeTotalYears = Math.max(1, resolvedTotalYears || 3);
 
         let requiredCredits = 120;
-        if (program?.totalCreditUnits) {
-          requiredCredits = program.totalCreditUnits;
+        if (resolvedProgram?.totalCreditUnits) {
+          requiredCredits = resolvedProgram.totalCreditUnits;
         } else if (targetCourseId) {
           try {
             const courseData = await getBackend<any>(
@@ -1125,7 +1252,7 @@ function parseIntakeYear(intakesJson: string | null | undefined): string | null 
     intakesJson,
     null,
   );
-  if (arr.length > 0) {
+  if (arr && arr.length > 0) {
     const valid = arr.find((i) => i && (i.academic_year || i.month));
     if (valid) return valid.academic_year || valid.month || null;
   }

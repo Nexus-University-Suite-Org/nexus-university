@@ -1,32 +1,22 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { motion } from "framer-motion";
 import {
   CreditCard,
   Receipt,
   CheckCircle2,
-  Clock,
   AlertTriangle,
   Download,
-  Eye,
-  TrendingUp,
   Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
   Calendar,
-  Filter,
-  PieChart,
-  BarChart3,
   Sparkles,
   ChevronRight,
   FileText,
   Building2,
-  Banknote,
   Smartphone,
   Globe,
-  Search,
-  X,
-  BookOpen,
-  Award,
+  Landmark,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,437 +27,435 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend, getMessagingBackend } from "@/lib/backendApi";
+import {
+  getBackend,
+  postBackend,
+  getNuBackend,
+  postNuBackend,
+  getMessagingBackend,
+} from "@/lib/backendApi";
 
-interface Fee {
-  id: string;
+interface StudentFee {
+  id: number;
+  studentId: number;
+  feeAssignmentId: number;
   amount: number;
-  paid_amount: number;
-  due_date: string;
-  semester: string;
-  academic_year: string;
-  description: string;
-}
-
-interface Payment {
-  id: string;
-  amount: number;
-  paid_at: string;
-  payment_method: string;
+  paidAmount: number;
+  balance: number;
+  dueDate: string | null;
   status: string;
-  transaction_ref: string;
-  fee_id: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-interface Course {
-  id: string;
-  title: string;
-  code: string;
-  credits: number;
+interface FeeAssignmentItem {
+  id: number;
+  itemName: string;
+  category: string;
+  yearLevel: string;
   semester: string;
-  year: number;
-}
-
-interface FeeAssignment {
-  id: string;
-  course_id: string;
-  semester: number;
-  academic_year: string;
+  academicYear: string;
   amount: number;
   currency: string;
   college: string;
-  course_code: string;
-  course_name: string;
+  notes?: string;
 }
 
-interface Enrollment {
-  id: string;
-  course_id: string;
-  student_id: string;
-  enrolled_at: string;
+interface Prn {
+  id: number;
+  prnCode: string;
+  studentId: string;
+  feeId: number | null;
+  amount: number;
+  purpose: string;
   status: string;
-  course?: Course;
+  paymentMethod: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
-interface CourseFeesBreakdown {
-  course: Course;
-  enrollment: Enrollment;
-  semesterFees: Fee[] | FeeAssignment[];
-  totalCost: number;
-  totalPaid: number;
+interface Transaction {
+  id: number;
+  prnId: number;
+  prnCode: string;
+  studentId: string;
+  amount: number;
+  paymentMethod: string;
+  transactionRef: string;
+  status: string;
+  paidAt: string;
+  createdAt: string;
+}
+
+interface ProgramFeeSemester {
+  name: string;
+  tuition?: number;
+  functional?: number;
+  total?: number;
+}
+
+interface ProgramFeeYear {
+  year: number;
+  semesters: ProgramFeeSemester[];
+}
+
+interface ProgramFeeStructure {
+  currency?: string;
+  year_fees?: ProgramFeeYear[];
+}
+
+const paymentMethods = [
+  {
+    key: "mobile-money",
+    title: "Mobile Money",
+    subtitle: "MTN MoMo, Airtel Money",
+    timing: "Instant",
+    desc: "Pay securely via your phone wallet",
+    images: ["/images/payments/mtn-momo.png", "/images/payments/airtel-money.png"],
+    bg: "from-emerald-500 to-teal-500",
+  },
+  {
+    key: "bank-transfer",
+    title: "Bank Transfer",
+    subtitle: "All major banks",
+    timing: "Same-day",
+    desc: "Transfer to the university account",
+    images: ["/images/payments/bank-transfer.svg"],
+    bg: "from-primary to-primary/70",
+  },
+  {
+    key: "bank-branch",
+    title: "Bank Branch",
+    subtitle: "Cash deposit",
+    timing: "Same-day",
+    desc: "Deposit at any bank branch",
+    images: ["/images/payments/bank-branch.svg"],
+    bg: "from-amber-500 to-orange-500",
+  },
+  {
+    key: "online-portal",
+    title: "Online Portal",
+    subtitle: "Visa / Mastercard",
+    timing: "Instant",
+    desc: "Pay with your card online",
+    images: ["/images/payments/visa.svg", "/images/payments/mastercard.svg"],
+    bg: "from-secondary to-secondary/70",
+  },
+];
+
+function parseProgramFees(json: string | null | undefined): ProgramFeeStructure | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as ProgramFeeStructure;
+  } catch {
+    return null;
+  }
+}
+
+function formatMoney(n: number, currency = "UGX") {
+  const v = Number(n) || 0;
+  return `${currency} ${v.toLocaleString("en-US")}`;
 }
 
 export function PaymentsTab() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
-  const [fees, setFees] = useState<Fee[]>([]);
-  const [feeAssignments, setFeeAssignments] = useState<FeeAssignment[]>([]);
-  const [allFeeAssignments, setAllFeeAssignments] = useState<FeeAssignment[]>(
-    [],
-  );
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [courseFeesBreakdown, setCourseFeesBreakdown] = useState<
-    CourseFeesBreakdown[]
-  >([]);
+
   const [loading, setLoading] = useState(true);
-  const [filterYear, setFilterYear] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [payingKey, setPayingKey] = useState<string | null>(null);
+  const [studentFees, setStudentFees] = useState<StudentFee[]>([]);
+  const [feeItems, setFeeItems] = useState<FeeAssignmentItem[]>([]);
+  const [prns, setPrns] = useState<Prn[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [programFeeFallback, setProgramFeeFallback] = useState<ProgramFeeStructure | null>(
+    null,
+  );
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+  const uid = user?.uid || "";
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!uid) return;
+    setLoading(true);
+    setError(null);
     try {
-      if (!user) return;
-      setLoading(true);
+      const [fees, transactionsData, prnsData, catalogue, programData] =
+        await Promise.all([
+          getBackend<StudentFee[]>(`/api/v1/student-fees?studentId=${uid}`).catch(
+            () => [] as StudentFee[],
+          ),
+          getNuBackend<Transaction[]>(
+            `/api/v1/payments/transactions/${uid}`,
+          ).catch(() => [] as Transaction[]),
+          getNuBackend<Prn[]>(`/api/v1/payments/prn/${uid}`).catch(
+            () => [] as Prn[],
+          ),
+          getBackend<FeeAssignmentItem[]>("/api/v1/fees").catch(
+            () => [] as FeeAssignmentItem[],
+          ),
+          getBackend<any>("/api/v1/programs").catch(() => null),
+        ]);
 
-      const [feesData, enrollmentsData] = await Promise.all([
-        getBackend<any[]>(`/api/student-fees/?student_id=${user.uid}`),
-        getMessagingBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`),
-      ]);
+      setStudentFees(fees || []);
+      setTransactions(transactionsData || []);
+      setPrns(prnsData || []);
 
-      setFees(feesData as Fee[]);
-      setPayments([]);
+      const collegePref = profile?.college || "";
+      const cats = (catalogue || []).filter(
+        (f) =>
+          !collegePref ||
+          f.college?.toLowerCase().includes(collegePref.toLowerCase()) ||
+          collegePref.toLowerCase().includes(f.college?.toLowerCase() || ""),
+      );
+      setFeeItems(cats.length > 0 ? cats : catalogue || []);
 
-      if (enrollmentsData.length > 0) {
-        const courseIds = [
-          ...new Set(enrollmentsData.map((e: any) => e.course_id)),
-        ];
-
-        // Fetch course units for enrolled courses
-        let courseUnits: any[] = [];
-        if (courseIds.length > 0) {
-          courseUnits = await getMessagingBackend<any[]>("/api/course-units/");
+      // Fallback fee derivation from the student's programme record
+      let programDetail: any = null;
+      const name = profile?.programme || profile?.department || "";
+      const match =
+        programsFind(programData, name) || (programData || [])[0];
+      if (match?.id) {
+        try {
+          programDetail = await getBackend<any>(`/api/v1/programs/${match.id}`);
+        } catch {
+          programDetail = null;
         }
-
-        const courseMap: Record<string, any> = {};
-        courseUnits.forEach((cu: any) => {
-          courseMap[cu.id] = cu;
-        });
-
-        const transformedEnrollments = enrollmentsData.map((e: any) => ({
-          ...e,
-          course: courseMap[e.course_id],
-        }));
-        setEnrollments(transformedEnrollments as Enrollment[]);
-
-        // Fetch fee assignments via fee-assignments endpoint
-        if (courseIds.length > 0) {
-          try {
-            const feeAssignmentsData = await getBackend<any[]>("/api/fee-assignments/");
-            // Filter to current semester/year using college from first enrollment
-            const college = transformedEnrollments[0]?.course?.college;
-            const currentDate = new Date();
-            const currentYear = currentDate.getFullYear();
-            const currentMonth = currentDate.getMonth() + 1;
-            const currentSemester = currentMonth <= 6 ? 2 : 1;
-            const academicYear =
-              currentMonth <= 6
-                ? `${currentYear - 1}/${currentYear}`
-                : `${currentYear}/${currentYear + 1}`;
-
-            const currentFeeAssignmentsData = feeAssignmentsData.filter(
-              (fa: any) =>
-                fa.semester === currentSemester &&
-                fa.academic_year === academicYear &&
-                (!college || fa.college === college),
-            );
-
-            if (currentFeeAssignmentsData.length === 0) {
-              const fallback = feeAssignmentsData.filter(
-                (fa: any) =>
-                  fa.semester === currentSemester &&
-                  fa.academic_year === academicYear,
-              );
-              setFeeAssignments(fallback as FeeAssignment[]);
-            } else {
-              setFeeAssignments(currentFeeAssignmentsData as FeeAssignment[]);
-            }
-
-            // If college filter failed, try broader
-            let allFiltered = feeAssignmentsData;
-            if (college) {
-              const byCollege = feeAssignmentsData.filter(
-                (fa: any) => fa.college === college,
-              );
-              if (byCollege.length > 0) allFiltered = byCollege;
-            }
-            setAllFeeAssignments(allFiltered as FeeAssignment[]);
-          } catch {
-            setFeeAssignments([]);
-            setAllFeeAssignments([]);
-          }
-        } else {
-          setFeeAssignments([]);
-          setAllFeeAssignments([]);
-        }
-      } else {
-        setEnrollments([]);
-        setFeeAssignments([]);
-        setAllFeeAssignments([]);
       }
-    } catch (error) {
-      console.error("Error fetching payment data:", error);
+      setProgramFeeFallback(
+        programDetail?.fees
+          ? parseProgramFees(programDetail.fees)
+          : null,
+      );
+    } catch (e: any) {
+      console.error("Error fetching payment data:", e);
+      setError(e?.message || "Could not load payment data.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [uid, profile?.college, profile?.programme, profile?.department]);
 
-  const paymentTotalsByFee = useMemo(() => {
-    const map = new Map<string, number>();
-    payments
-      .filter((p) => p.status === "completed")
-      .forEach((p) => {
-        map.set(p.fee_id, (map.get(p.fee_id) || 0) + Number(p.amount));
-      });
-    return map;
-  }, [payments]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const paymentTotalsForFee = (feeId: string) =>
-    paymentTotalsByFee.get(feeId) || 0;
+  function programsFind(list: any[] | null, name: string) {
+    if (!Array.isArray(list)) return null;
+    const n = (name || "").trim().toLowerCase();
+    return (
+      list.find(
+        (p) =>
+          (p.programName || "").toLowerCase() === n ||
+          (p.programCode || "").toLowerCase() === n ||
+          (p.programName || "").toLowerCase().includes(n) ||
+          (p.programCode || "").toLowerCase().includes(n),
+      ) ||
+      list.find((p) => p.status === "Active") ||
+      list[0]
+    );
+  }
 
-  const totalFees =
-    feeAssignments.length > 0
-      ? feeAssignments.reduce((acc, fa) => acc + Number(fa.amount || 0), 0)
-      : fees.reduce((acc, f) => acc + Number(f.amount || 0), 0);
-  const totalPaid = Array.from(paymentTotalsByFee.values()).reduce(
-    (acc, v) => acc + v,
-    0,
-  );
+  // ---- Fee snapshot derivation ----
+  const currentAcademicYear = useMemo(() => {
+    const d = new Date();
+    const m = d.getMonth() + 1;
+    return m <= 6 ? `${d.getFullYear() - 1}/${d.getFullYear()}` : `${d.getFullYear()}/${d.getFullYear() + 1}`;
+  }, []);
+
+  const hasStudentFees = studentFees.length > 0;
+
+  const totalFees = useMemo(() => {
+    if (hasStudentFees) {
+      return studentFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+    }
+    if (programFeeFallback?.year_fees?.length) {
+      return programFeeFallback.year_fees.reduce(
+        (sum, y) =>
+          sum +
+          (y.semesters || []).reduce(
+            (s2, sem) => s2 + (Number(sem.total) || 0),
+            0,
+          ),
+        0,
+      );
+    }
+    return (feeItems || []).reduce((s, f) => s + (Number(f.amount) || 0), 0);
+  }, [hasStudentFees, studentFees, programFeeFallback, feeItems]);
+
+  const totalPaid = useMemo(() => {
+    if (hasStudentFees) {
+      return studentFees.reduce((s, f) => s + (Number(f.paidAmount) || 0), 0);
+    }
+    // Fall back to confirmed transactions
+    return transactions
+      .filter((t) => t.status === "confirmed" || t.status === "paid")
+      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  }, [hasStudentFees, studentFees, transactions]);
+
   const outstanding = Math.max(totalFees - totalPaid, 0);
   const paymentProgress = totalFees > 0 ? (totalPaid / totalFees) * 100 : 0;
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
+  const currency = useMemo(() => {
+    if (hasStudentFees) return "UGX";
+    return programFeeFallback?.currency || "UGX";
+  }, [hasStudentFees, programFeeFallback]);
+
+  // ---- Outstanding items to pay ----
+  const outstandingItems = useMemo(() => {
+    if (hasStudentFees) {
+      return studentFees
+        .map((f) => ({ ...f, remaining: Math.max(Number(f.balance) || Number(f.amount) - Number(f.paidAmount), 0) }))
+        .filter((f) => f.remaining > 0);
+    }
+    // Derive from program fee fallback: current year, unpaid
+    if (programFeeFallback?.year_fees?.length) {
+      const items: { label: string; amount: number }[] = [];
+      programFeeFallback.year_fees.forEach((y) => {
+        (y.semesters || []).forEach((sem) => {
+          const amt = Number(sem.total) || 0;
+          if (amt > 0)
+            items.push({ label: `Year ${y.year} • ${sem.name || `Semester`}`, amount: amt });
+        });
+      });
+      return items;
+    }
+    return (feeItems || []).map((f) => ({
+      label: `${f.itemName} (${f.category})`,
+      amount: Number(f.amount) || 0,
+    }));
+  }, [hasStudentFees, studentFees, programFeeFallback, feeItems]);
+
+  const totalOutstanding = outstandingItems.reduce((s, i) => s + i.amount, 0);
+
+  // ---- Real pay flow via NU PRN + record ----
+  const handlePay = async (methodKey: string) => {
+    if (!uid) return;
+    const method = paymentMethods.find((m) => m.key === methodKey);
+    if (!method) return;
+
+    if (outstandingItems.length === 0) {
+      toast({
+        title: "All settled",
+        description: "You have no outstanding balances to pay right now.",
+      });
+      return;
+    }
+
+    const item = outstandingItems[0];
+    const amount = Math.round(item.amount);
+    if (amount <= 0) return;
+
+    setPayingKey(methodKey);
+    const transactionRef = `TX-${method.key.toUpperCase()}-${Math.floor(Date.now() / 1000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      // 1. Generate a PRN reference
+      const prn = await postNuBackend<Prn>("/api/v1/payments/prn/generate", {
+        studentId: uid,
+        feeId: null,
+        amount,
+        purpose: item.label,
+      });
+
+      // 2. Record the transaction against the PRN (persists a real transaction)
+      const tx = await postNuBackend<Transaction>("/api/v1/payments/record", {
+        studentId: uid,
+        prnId: prn.id,
+        amount,
+        paymentMethod: method.title,
+        transactionRef,
+      });
+
+      // 3. If a matching NAP student-fee row exists, also update its balance
+      if (studentFees.length > 0 && hasStudentFees) {
+        try {
+          await postBackend(
+            `/api/v1/student-fees/${studentFees[0].id}/payments?amount=${amount}`,
+            undefined,
+          );
+        } catch {
+          // non-fatal
+        }
+      }
+
+      setTransactions((prev) => [tx, ...prev]);
+      setPrns((prev) => [prn, ...prev]);
+      await fetchData();
+
+      toast({
+        title: "Payment recorded",
+        description: `${formatMoney(amount, currency)} via ${method.title}. Reference ${tx.transactionRef}.`,
+      });
+    } catch (e: any) {
+      console.error("Payment failed", e);
+      toast({
+        title: "Payment failed",
+        description: e?.message || "We could not process your payment.",
+        variant: "destructive",
+      });
+    } finally {
+      setPayingKey(null);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch ((status || "").toLowerCase()) {
+      case "confirmed":
+      case "paid":
       case "completed":
         return "bg-emerald-500/10 text-emerald-600 border-emerald-500/30";
       case "pending":
+      case "active":
         return "bg-amber-500/10 text-amber-600 border-amber-500/30";
       case "failed":
+      case "expired":
         return "bg-destructive/10 text-destructive border-destructive/30";
       default:
         return "bg-muted text-muted-foreground";
     }
   };
 
-  const getMethodIcon = (method: string) => {
-    if (method?.toLowerCase().includes("mobile")) return Smartphone;
-    if (method?.toLowerCase().includes("bank")) return Building2;
+  const getMethodIcon = (m: string) => {
+    const s = (m || "").toLowerCase();
+    if (s.includes("mobile") || s.includes("momo") || s.includes("airtel"))
+      return Smartphone;
+    if (s.includes("bank") || s.includes("branch") || s.includes("transfer"))
+      return Building2;
     return Globe;
   };
 
-  const paymentMethods = [
-    {
-      key: "mobile-money",
-      title: "Mobile Money",
-      subtitle: "MTN MoMo, Airtel Money",
-      timing: "Instant",
-      icon: Smartphone,
-      bg: "from-emerald-500 to-teal-500",
-      instant: true,
-    },
-    {
-      key: "bank-transfer",
-      title: "Bank Transfer",
-      subtitle: "All major banks",
-      timing: "Same-day",
-      icon: Banknote,
-      bg: "from-primary to-primary/70",
-      instant: false,
-    },
-    {
-      key: "bank-branch",
-      title: "Bank Branch",
-      subtitle: "Cash deposit",
-      timing: "Same-day",
-      icon: Building2,
-      bg: "from-amber-500 to-orange-500",
-      instant: false,
-    },
-    {
-      key: "online-portal",
-      title: "Online Portal",
-      subtitle: "Visa/Mastercard",
-      timing: "Instant",
-      icon: Globe,
-      bg: "from-secondary to-secondary/70",
-      instant: true,
-    },
-  ];
+  const sortedTransactions = useMemo(
+    () =>
+      [...transactions].sort(
+        (a, b) => new Date(b.paidAt || b.createdAt).getTime() - new Date(a.paidAt || a.createdAt).getTime(),
+      ),
+    [transactions],
+  );
 
-  const primaryCurrency =
-    feeAssignments.length > 0 ? feeAssignments[0].currency : "UGX";
+  const activePrns = useMemo(
+    () =>
+      prns.filter(
+        (p) => p.status !== "paid" && new Date(p.expiresAt).getTime() > Date.now(),
+      ),
+    [prns],
+  );
 
-  const findNextOutstandingFee = () =>
-    feeAssignments.length > 0
-      ? feeAssignments.find(
-          (fa) =>
-            Math.max(
-              Number(fa.amount || 0) - (paymentTotalsByFee.get(fa.id) || 0),
-              0,
-            ) > 0,
-        )
-      : fees.find(
-          (f) =>
-            Math.max(
-              Number(f.amount || 0) - (paymentTotalsByFee.get(f.id) || 0),
-              0,
-            ) > 0,
-        );
-
-  const handlePay = async (methodKey: string) => {
-    if (!user) return;
-    const method = paymentMethods.find((m) => m.key === methodKey);
-    if (!method) return;
-
-    const targetFee = findNextOutstandingFee();
-    if (!targetFee) {
-      toast({
-        title: "No outstanding fees",
-        description: "You have no unpaid balance to pay right now.",
-      });
-      return;
-    }
-
-    const alreadyPaid = paymentTotalsByFee.get(targetFee.id) || 0;
-    const amount = Math.max(Number(targetFee.amount || 0) - alreadyPaid, 0);
-
-    if (amount <= 0) {
-      toast({
-        title: "Nothing to pay",
-        description: "Your selected fee is already fully paid.",
-      });
-      return;
-    }
-
-    const transactionRef = `PAY-${method.key}-${Math.floor(
-      Date.now() / 1000,
-    )}-${Math.floor(100 + Math.random() * 900)}`;
-    const status = method.instant ? "completed" : "pending";
-
-    try {
-      // TODO: Replace with backend API call when payments endpoint is available
-      // await postBackend("/api/payments/", { ... });
-      const newPayment = {
-        id: transactionRef,
-        fee_id: targetFee.id,
-        student_id: user.uid,
-        amount,
-        payment_method: method.title,
-        transaction_ref: transactionRef,
-        status,
-        paid_at: new Date().toISOString(),
-      };
-
-      setPayments((prev) => [newPayment as Payment, ...prev]);
-      toast({
-        title: method.instant ? "Payment recorded" : "Payment submitted",
-        description: method.instant
-          ? "Your payment has been marked completed."
-          : "We received your payment request. It will be confirmed soon.",
-      });
-    } catch (error: any) {
-      console.error("Payment error", error);
-      toast({
-        title: "Payment failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Recompute course fee breakdown
-  useEffect(() => {
-    const paymentTotals = paymentTotalsByFee;
-    const breakdown = enrollments.map((enrollment) => {
-      if (feeAssignments.length > 0) {
-        // Use fee assignments - apply to all enrolled courses
-        const totalCost = feeAssignments.reduce(
-          (acc, fa) => acc + Number(fa.amount || 0),
-          0,
-        );
-        const totalPaidForCourse = feeAssignments.reduce(
-          (acc, fa) => acc + (paymentTotals.get(fa.id) || 0),
-          0,
-        );
-
-        return {
-          course: enrollment.course,
-          enrollment,
-          semesterFees: feeAssignments,
-          totalCost,
-          totalPaid: totalPaidForCourse,
-        };
-      } else {
-        // Fall back to old fees logic
-        const semesterFees = fees.filter(
-          (fee) => fee.semester === enrollment.course?.semester,
-        );
-        const totalCost = semesterFees.reduce(
-          (sum, fee) => sum + Number(fee.amount || 0),
-          0,
-        );
-        const totalPaidForSemester = semesterFees.reduce(
-          (sum, fee) => sum + (paymentTotals.get(fee.id) || 0),
-          0,
-        );
-
-        return {
-          course: enrollment.course,
-          enrollment,
-          semesterFees,
-          totalCost,
-          totalPaid: totalPaidForSemester,
-        };
-      }
-    });
-    setCourseFeesBreakdown(breakdown);
-  }, [feeAssignments, fees, enrollments, paymentTotalsByFee]);
-
-  const groupedFeeHistory = useMemo(() => {
-    const groups: Record<string, FeeAssignment[]> = {};
-    allFeeAssignments.forEach((fee) => {
-      const key = `${fee.academic_year}::${fee.semester}`;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(fee);
-    });
-
-    return Object.entries(groups)
-      .map(([key, items]) => {
-        const [academicYear, semesterStr] = key.split("::");
-        return {
-          academicYear,
-          semester: Number(semesterStr),
-          items,
-          total: items.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-        };
-      })
-      .sort((a, b) => {
-        const ayCompare = b.academicYear.localeCompare(a.academicYear);
-        if (ayCompare !== 0) return ayCompare;
-        return b.semester - a.semester;
-      });
-  }, [allFeeAssignments]);
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-border/60 p-12 text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your payment information…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
-      {/* Ambient Background */}
+      {/* Ambient background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-full blur-3xl"
@@ -482,120 +470,29 @@ export function PaymentsTab() {
       </div>
 
       <div className="relative space-y-8">
-        {/* Stats Hero Section */}
+        {error && (
+          <div className="rounded-xl border border-amber-300/40 bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+            {error}
+          </div>
+        )}
+
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
         >
-          {[
-            {
-              label: "Total Fees",
-              value: totalFees,
-              icon: Wallet,
-              gradient: "from-primary to-primary/70",
-              trend: null,
-              prefix: `${primaryCurrency} `,
-            },
-            {
-              label: "Amount Paid",
-              value: totalPaid,
-              icon: CheckCircle2,
-              gradient: "from-emerald-500 to-teal-500",
-              trend: { value: "+15%", up: true },
-              prefix: `${primaryCurrency} `,
-            },
-            {
-              label: "Outstanding",
-              value: outstanding,
-              icon: outstanding > 0 ? AlertTriangle : CheckCircle2,
-              gradient:
-                outstanding > 0
-                  ? "from-amber-500 to-orange-500"
-                  : "from-emerald-500 to-teal-500",
-              trend: null,
-              prefix: `${primaryCurrency} `,
-            },
-            {
-              label: "Transactions",
-              value: payments.length,
-              icon: Receipt,
-              gradient: "from-secondary to-secondary/70",
-              trend: null,
-              prefix: "",
-            },
-          ].map((stat, i) => (
-            <motion.div
-              key={`stat-${i}`}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: i * 0.1, type: "spring" }}
-              whileHover={{ y: -5, transition: { duration: 0.2 } }}
-            >
-              <Card className="relative overflow-hidden border-0 shadow-xl bg-card/80 backdrop-blur-sm h-full">
-                {/* Gradient Background */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-5`}
-                />
-                <div
-                  className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${stat.gradient} opacity-10 rounded-bl-full`}
-                />
-
-                <CardContent className="pt-6 relative">
-                  <div className="flex items-start justify-between mb-4">
-                    <div
-                      className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
-                    >
-                      <stat.icon className="h-6 w-6 text-white" />
-                    </div>
-                    {stat.trend && (
-                      <Badge
-                        variant="secondary"
-                        className="gap-1 bg-emerald-500/10 text-emerald-600 border-0"
-                      >
-                        {stat.trend.up ? (
-                          <ArrowUpRight className="h-3 w-3" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3" />
-                        )}
-                        {stat.trend.value}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-2xl lg:text-3xl font-bold truncate">
-                    {stat.prefix}
-                    {stat.value.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {stat.label}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Payment Progress - Premium Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-r from-card via-card to-muted/30">
-            {/* Decorative Elements */}
+          <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-card via-card to-muted/30">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full" />
-
             <CardHeader className="relative">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-xl shadow-emerald-500/30">
-                    <PieChart className="h-7 w-7 text-white" />
+                    <Wallet className="h-7 w-7 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-2xl">Payment Progress</CardTitle>
+                    <CardTitle className="text-2xl">Your Fees & Payments</CardTitle>
                     <CardDescription className="text-base">
-                      Your fee payment completion status
+                      Manage tuition and institutional charges for {currentAcademicYear}
                     </CardDescription>
                   </div>
                 </div>
@@ -615,9 +512,7 @@ export function PaymentsTab() {
                 </div>
               </div>
             </CardHeader>
-
             <CardContent className="relative pt-2">
-              {/* Custom Progress Bar */}
               <div className="relative h-6 rounded-full bg-muted/50 overflow-hidden mb-6">
                 <motion.div
                   initial={{ width: 0 }}
@@ -625,28 +520,22 @@ export function PaymentsTab() {
                   transition={{ duration: 1.5, ease: "easeOut" }}
                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-full"
                 />
-                <motion.div
-                  animate={{ x: ["-100%", "100%"] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                />
               </div>
-
               <div className="grid sm:grid-cols-3 gap-6">
                 <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
                     Amount Paid
                   </p>
                   <p className="text-xl font-bold text-emerald-600">
-                    {primaryCurrency} {totalPaid.toLocaleString()}
+                    {formatMoney(totalPaid, currency)}
                   </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                    Remaining
+                    Outstanding
                   </p>
                   <p className="text-xl font-bold text-amber-600">
-                    {primaryCurrency} {outstanding.toLocaleString()}
+                    {formatMoney(outstanding, currency)}
                   </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
@@ -654,7 +543,7 @@ export function PaymentsTab() {
                     Total Fees
                   </p>
                   <p className="text-xl font-bold text-primary">
-                    {primaryCurrency} {totalFees.toLocaleString()}
+                    {formatMoney(totalFees, currency)}
                   </p>
                 </div>
               </div>
@@ -662,41 +551,204 @@ export function PaymentsTab() {
           </Card>
         </motion.div>
 
-        {/* Payment Methods */}
+        {/* Stat cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        >
+          {[
+            {
+              label: "Total Fees",
+              value: totalFees,
+              icon: Wallet,
+              gradient: "from-primary to-primary/70",
+            },
+            {
+              label: "Amount Paid",
+              value: totalPaid,
+              icon: CheckCircle2,
+              gradient: "from-emerald-500 to-teal-500",
+            },
+            {
+              label: "Outstanding",
+              value: outstanding,
+              icon: outstanding > 0 ? AlertTriangle : CheckCircle2,
+              gradient:
+                outstanding > 0
+                  ? "from-amber-500 to-orange-500"
+                  : "from-emerald-500 to-teal-500",
+            },
+            {
+              label: "Transactions",
+              value: transactions.length,
+              icon: Receipt,
+              gradient: "from-secondary to-secondary/70",
+            },
+          ].map((stat, i) => (
+            <motion.div
+              key={`stat-${i}`}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: i * 0.08, type: "spring" }}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <Card className="relative overflow-hidden border-0 shadow-xl bg-card/80 backdrop-blur-sm h-full">
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-5`}
+                />
+                <div
+                  className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${stat.gradient} opacity-10 rounded-bl-full`}
+                />
+                <CardContent className="pt-6 relative">
+                  <div className="flex items-start justify-between mb-4">
+                    <div
+                      className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                    >
+                      <stat.icon className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-2xl lg:text-3xl font-bold truncate">
+                    {stat.value.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {stat.label}
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Outstanding breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
         >
           <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-secondary" />
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Landmark className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Fee Breakdown</CardTitle>
+                  <CardDescription>
+                    {hasStudentFees
+                      ? "Your assigned fee schedule"
+                      : "Estimated fee schedule from your programme"}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <Separator />
+            <CardContent className="p-4 sm:p-6">
+              {outstandingItems.length === 0 ? (
+                <div className="text-center py-10">
+                  <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3 opacity-80" />
+                  <h3 className="font-semibold text-lg">
+                    You're fully paid up 🎉
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    No outstanding balances on your account.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {outstandingItems.map((item, i) => {
+                    const pct = totalOutstanding > 0 ? (item.amount / totalOutstanding) * 100 : 0;
+                    return (
+                      <motion.div
+                        key={`${item.label}-${i}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="p-4 rounded-xl border border-border/50 bg-muted/20"
+                      >
+                        <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">{item.label}</p>
+                              {hasStudentFees && (item as any).dueDate && (
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" /> Due{" "}
+                                  {new Date((item as any).dueDate).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <p className="font-bold text-sm">
+                            {formatMoney(item.amount, currency)}
+                          </p>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.8 }}
+                            className="h-full bg-gradient-to-r from-primary to-secondary"
+                          />
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  <div className="pt-3 flex items-center justify-between border-t border-border/50">
+                    <p className="text-sm text-muted-foreground">Total outstanding</p>
+                    <p className="font-bold text-lg text-amber-600">
+                      {formatMoney(totalOutstanding, currency)}
+                    </p>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">Payment Methods</CardTitle>
-                    <CardDescription>
-                      Choose how you want to pay
-                    </CardDescription>
-                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Payment methods */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-secondary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Make a Payment</CardTitle>
+                  <CardDescription>
+                    Choose how you'd like to pay your outstanding balance
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {paymentMethods.map((method) => {
-                const Icon = method.icon;
+                const busy = payingKey === method.key;
                 return (
                   <div
-                    key={method.title}
+                    key={method.key}
                     className="p-4 rounded-2xl border border-border/50 bg-muted/20 hover:border-primary/30 transition-all flex flex-col gap-3"
                   >
                     <div className="flex items-center justify-between">
                       <div
-                        className={`h-10 w-10 rounded-xl bg-gradient-to-br ${method.bg} flex items-center justify-center shadow-lg`}
+                        className={`h-10 w-10 rounded-xl bg-gradient-to-br ${method.bg} flex items-center justify-center px-1 shadow-lg`}
                       >
-                        <Icon className="h-5 w-5 text-white" />
+                        {method.images.length > 1 ? (
+                          <div className="flex gap-0.5">
+                            {method.images.map((img, idx) => (
+                              <img key={idx} src={img} alt="" className="h-5 w-auto object-contain" />
+                            ))}
+                          </div>
+                        ) : (
+                          <img src={method.images[0]} alt={method.title} className="h-5 w-auto object-contain" />
+                        )}
                       </div>
                       <Badge variant="secondary" className="text-xs">
                         {method.timing}
@@ -704,17 +756,16 @@ export function PaymentsTab() {
                     </div>
                     <div className="space-y-1">
                       <p className="font-semibold text-sm">{method.title}</p>
-                      <p className="text-muted-foreground text-sm">
-                        {method.subtitle}
-                      </p>
+                      <p className="text-muted-foreground text-xs">{method.desc}</p>
                     </div>
                     <Button
                       size="sm"
-                      className="mt-auto"
+                      className="mt-auto gap-2"
                       onClick={() => handlePay(method.key)}
-                      disabled={outstanding <= 0}
+                      disabled={outstanding <= 0 || payingKey !== null}
                     >
-                      Pay Now
+                      {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {busy ? "Processing…" : "Pay Now"}
                     </Button>
                   </div>
                 );
@@ -723,264 +774,83 @@ export function PaymentsTab() {
           </Card>
         </motion.div>
 
-        {/* Main Content Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Fee Structure by Course Card */}
+          {/* Payment history */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
             className="lg:col-span-2"
           >
             <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <BookOpen className="h-5 w-5 text-primary" />
+                    <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                      <Receipt className="h-5 w-5 text-secondary" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">
-                        Course Fee Breakdown
-                      </CardTitle>
+                      <CardTitle className="text-lg">Payment History</CardTitle>
                       <CardDescription>
-                        Fees for each course by semester
+                        Your recorded transactions
                       </CardDescription>
                     </div>
                   </div>
+                  <Badge variant="outline">{sortedTransactions.length} total</Badge>
                 </div>
               </CardHeader>
+              <Separator />
               <CardContent>
-                {loading ? (
+                {sortedTransactions.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                    <p className="text-muted-foreground">
-                      Loading course data...
-                    </p>
-                  </div>
-                ) : courseFeesBreakdown.length === 0 ? (
-                  <div className="text-center py-12">
-                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
                     <h3 className="font-semibold text-lg mb-2">
-                      No courses found
+                      No payments recorded yet
                     </h3>
                     <p className="text-muted-foreground text-sm">
-                      Your enrolled courses will appear here
+                      Payments you make will appear here with their receipts.
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
-                    {courseFeesBreakdown.map((breakdown, courseIdx) => {
-                      const coursePaid = breakdown.totalPaid;
-                      const courseRemaining = breakdown.totalCost - coursePaid;
-                      const courseProgress =
-                        breakdown.totalCost > 0
-                          ? (coursePaid / breakdown.totalCost) * 100
-                          : 0;
-
+                  <div className="space-y-3">
+                    {sortedTransactions.map((tx, i) => {
+                      const Icon = getMethodIcon(tx.paymentMethod);
                       return (
                         <motion.div
-                          key={breakdown.enrollment?.id || courseIdx}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: courseIdx * 0.1 }}
-                          className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-muted/30 to-muted/10 p-6 group hover:border-primary/20 transition-all"
+                          key={tx.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          onClick={() => setSelectedTransaction(tx)}
+                          className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all cursor-pointer border border-border/50 group"
                         >
-                          {/* Decorative Background */}
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                          <div className="relative">
-                            {/* Course Header */}
-                            <div className="flex items-start justify-between mb-5">
-                              <div className="flex items-start gap-4">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                                  <Award className="h-6 w-6 text-primary" />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-lg">
-                                      {breakdown.course?.title}
-                                    </h3>
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {breakdown.course?.code}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-sm text-muted-foreground">
-                                      {breakdown.course?.semester}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                      •
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                      {breakdown.course?.credits} Credits
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                              <Badge
-                                className={`${
-                                  courseRemaining <= 0
-                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
-                                    : courseRemaining <
-                                        breakdown.totalCost * 0.25
-                                      ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
-                                      : "bg-destructive/10 text-destructive border-destructive/30"
-                                }`}
-                              >
-                                {courseRemaining <= 0 ? "✓ Paid" : "Pending"}
-                              </Badge>
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                              <Icon className="h-6 w-6 text-white" />
                             </div>
-
-                            {/* Course Fee */}
-                            {breakdown.semesterFees.length > 0 ? (
-                              <>
-                                <div className="space-y-3 mb-5">
-                                  {breakdown.semesterFees.map(
-                                    (feeItem, feeIdx) => {
-                                      const paid = paymentTotalsForFee(
-                                        feeItem.id,
-                                      );
-                                      const isPaid = paid >= feeItem.amount;
-                                      const isPartial =
-                                        paid > 0 && paid < feeItem.amount;
-                                      const progress =
-                                        feeItem.amount > 0
-                                          ? Math.min(
-                                              (paid / feeItem.amount) * 100,
-                                              100,
-                                            )
-                                          : 0;
-
-                                      // Check if this is a FeeAssignment or Fee
-                                      const isFeeAssignment =
-                                        "course_name" in feeItem;
-
-                                      return (
-                                        <motion.div
-                                          key={`${feeItem.id}-${feeIdx}`}
-                                          initial={{ opacity: 0, x: -10 }}
-                                          animate={{ opacity: 1, x: 0 }}
-                                          transition={{ delay: feeIdx * 0.05 }}
-                                          className="p-4 rounded-xl bg-background/50 border border-border/50"
-                                        >
-                                          <div className="flex items-center justify-between mb-3">
-                                            <div>
-                                              <p className="font-semibold text-sm">
-                                                {isFeeAssignment
-                                                  ? `${feeItem.course_name} - ${feeItem.course_code}`
-                                                  : feeItem.description}
-                                              </p>
-                                              <p className="text-xs text-muted-foreground">
-                                                {isFeeAssignment
-                                                  ? `Semester ${feeItem.semester} • ${feeItem.academic_year}`
-                                                  : `Due: ${new Date(feeItem.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
-                                              </p>
-                                              {isFeeAssignment && (
-                                                <p className="text-xs text-muted-foreground">
-                                                  {feeItem.college}
-                                                </p>
-                                              )}
-                                            </div>
-                                            <div className="text-right">
-                                              <p className="font-bold text-sm">
-                                                {isFeeAssignment
-                                                  ? feeItem.currency
-                                                  : "UGX"}{" "}
-                                                {feeItem.amount.toLocaleString()}
-                                              </p>
-                                              {isPartial && (
-                                                <p className="text-xs text-emerald-600">
-                                                  Paid:{" "}
-                                                  {isFeeAssignment
-                                                    ? feeItem.currency
-                                                    : "UGX"}{" "}
-                                                  {paid.toLocaleString()}
-                                                </p>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {/* Mini Progress Bar */}
-                                          <div className="h-2 rounded-full bg-muted overflow-hidden">
-                                            <motion.div
-                                              initial={{ width: 0 }}
-                                              animate={{
-                                                width: `${progress}%`,
-                                              }}
-                                              transition={{ duration: 0.8 }}
-                                              className={`h-full ${
-                                                isPaid
-                                                  ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-                                                  : isPartial
-                                                    ? "bg-gradient-to-r from-amber-500 to-orange-500"
-                                                    : "bg-gradient-to-r from-primary to-secondary"
-                                              }`}
-                                            />
-                                          </div>
-                                        </motion.div>
-                                      );
-                                    },
-                                  )}
-                                </div>
-
-                                {/* Course Total */}
-                                <div className="pt-4 border-t border-border/50">
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <p className="text-sm text-muted-foreground mb-1">
-                                        Total Course Cost
-                                      </p>
-                                      <p className="font-bold text-lg">
-                                        {(
-                                          breakdown
-                                            .semesterFees[0] as FeeAssignment
-                                        )?.currency || "UGX"}{" "}
-                                        {breakdown.totalCost.toLocaleString()}
-                                      </p>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-sm text-emerald-600 font-semibold">
-                                        Paid:{" "}
-                                        {(
-                                          breakdown
-                                            .semesterFees[0] as FeeAssignment
-                                        )?.currency || "UGX"}{" "}
-                                        {breakdown.totalPaid.toLocaleString()}
-                                      </p>
-                                      {courseRemaining > 0 && (
-                                        <p className="text-sm text-destructive font-semibold">
-                                          Remaining:{" "}
-                                          {(
-                                            breakdown
-                                              .semesterFees[0] as FeeAssignment
-                                          )?.currency || "UGX"}{" "}
-                                          {courseRemaining.toLocaleString()}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Course Progress Bar */}
-                                  <div className="mt-3 h-3 rounded-full bg-muted/50 overflow-hidden">
-                                    <motion.div
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${courseProgress}%` }}
-                                      transition={{ duration: 1 }}
-                                      className="h-full bg-gradient-to-r from-primary via-secondary to-accent rounded-full"
-                                    />
-                                  </div>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-center py-6">
-                                <p className="text-muted-foreground text-sm">
-                                  No fees associated with this course
-                                </p>
-                              </div>
-                            )}
+                            <div>
+                              <p className="font-bold">
+                                {formatMoney(tx.amount, currency)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {tx.paymentMethod} • {tx.prnCode}
+                              </p>
+                              <p className="text-xs text-muted-foreground font-mono">
+                                {tx.transactionRef}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge className={getStatusColor(tx.status)}>
+                              {tx.status}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {new Date(tx.paidAt || tx.createdAt).toLocaleDateString(
+                                "en-US",
+                                { month: "short", day: "numeric", year: "numeric" },
+                              )}
+                            </p>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground mt-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </motion.div>
                       );
@@ -991,352 +861,85 @@ export function PaymentsTab() {
             </Card>
           </motion.div>
 
+          {/* Active PRNs */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.35 }}
+            transition={{ delay: 0.25 }}
             className="lg:col-span-2"
           >
-            <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm">
+            <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm h-full">
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-secondary" />
+                  <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-accent" />
                   </div>
                   <div>
                     <CardTitle className="text-lg">
-                      Fee History (All Years & Semesters)
+                      Payment Reference Numbers (PRNs)
                     </CardTitle>
                     <CardDescription>
-                      Historical fee assignments for your course progression
+                      Bank/mobile payment references for settlement
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
+              <Separator />
               <CardContent>
-                {loading ? (
-                  <div className="text-center py-8">
-                    <div className="inline-block animate-spin rounded-full h-7 w-7 border-b-2 border-secondary mb-3"></div>
-                    <p className="text-muted-foreground">
-                      Loading fee history...
-                    </p>
-                  </div>
-                ) : groupedFeeHistory.length === 0 ? (
-                  <div className="text-center py-8">
+                {activePrns.length === 0 ? (
+                  <div className="text-center py-10">
+                    <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <h3 className="font-semibold text-lg mb-1">No active PRNs</h3>
                     <p className="text-muted-foreground text-sm">
-                      No fee history available yet.
+                      Generate one to get a reference for bank or mobile-money payment.
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {groupedFeeHistory.map((group, groupIdx) => (
-                      <motion.div
-                        key={`${group.academicYear}-${group.semester}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: groupIdx * 0.05 }}
-                        className="rounded-xl border border-border/50 p-4 bg-muted/20"
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {activePrns.map((p) => (
+                      <div
+                        key={p.id}
+                        className="p-4 rounded-2xl border border-border/50 bg-muted/20"
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {group.academicYear} • Semester {group.semester}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {group.items.length} fee item
-                              {group.items.length > 1 ? "s" : ""}
-                            </p>
-                          </div>
-                          <p className="font-bold text-sm">
-                            {group.items[0]?.currency || "UGX"}{" "}
-                            {group.total.toLocaleString()}
-                          </p>
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge className={getStatusColor(p.status)}>{p.status}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(p.expiresAt).toLocaleDateString()}
+                          </span>
                         </div>
-
-                        <div className="space-y-2">
-                          {group.items.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center justify-between rounded-lg bg-background/70 px-3 py-2 border border-border/40"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {item.course_name} ({item.course_code})
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.college}
-                                </p>
-                              </div>
-                              <p className="text-sm font-semibold">
-                                {item.currency}{" "}
-                                {Number(item.amount || 0).toLocaleString()}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
+                        <p className="font-mono text-sm text-primary break-all">
+                          {p.prnCode}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {p.purpose || "Fee payment"}
+                        </p>
+                        <p className="font-bold mt-1">{formatMoney(p.amount, currency)}</p>
+                      </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Payment History Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm h-full">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                      <Receipt className="h-5 w-5 text-secondary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Payment History</CardTitle>
-                      <CardDescription>
-                        Your recent transactions
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 w-40 rounded-xl"
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-xl"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {loading ? (
-                    <div className="text-center py-12">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-secondary mb-4"></div>
-                      <p className="text-muted-foreground">
-                        Loading payment history...
-                      </p>
-                    </div>
-                  ) : payments.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <h3 className="font-semibold text-lg mb-2">
-                        No payments yet
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        Your payment history will appear here
-                      </p>
-                    </div>
-                  ) : (
-                    payments.map((payment, i) => {
-                      const MethodIcon = getMethodIcon(payment.payment_method);
-
-                      // Find the fee to get currency
-                      const fee =
-                        feeAssignments.find((fa) => fa.id === payment.fee_id) ||
-                        fees.find((f) => f.id === payment.fee_id);
-                      const currency =
-                        (fee as FeeAssignment)?.currency || "UGX";
-
-                      return (
-                        <motion.div
-                          key={payment.id}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.1 }}
-                          whileHover={{ scale: 1.01 }}
-                          onClick={() => setSelectedPayment(payment)}
-                          className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all cursor-pointer border border-border/50 group"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="relative">
-                              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <MethodIcon className="h-7 w-7 text-white" />
-                              </div>
-                              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 flex items-center justify-center border-2 border-card">
-                                <CheckCircle2 className="h-3 w-3 text-white" />
-                              </div>
-                            </div>
-                            <div>
-                              <p className="font-bold text-lg">
-                                {currency} {payment.amount.toLocaleString()}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {payment.payment_method}
-                              </p>
-                              <p className="text-xs text-muted-foreground font-mono">
-                                {payment.transaction_ref}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <Badge
-                              className={getPaymentStatusColor(payment.status)}
-                            >
-                              {payment.status}
-                            </Badge>
-                            <p className="text-sm text-muted-foreground mt-2">
-                              {new Date(payment.paid_at).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )}
-                            </p>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground mt-2 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* View All Button */}
-                {payments.length > 0 && (
-                  <Button
-                    variant="outline"
-                    className="w-full mt-6 h-12 rounded-xl gap-2 border-dashed"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View All Transactions
-                  </Button>
                 )}
               </CardContent>
             </Card>
           </motion.div>
         </div>
 
-        {/* Payment Detail Modal */}
-        <AnimatePresence>
-          {selectedPayment && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
-              onClick={() => setSelectedPayment(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md"
-              >
-                <Card className="border-0 shadow-2xl overflow-hidden">
-                  {/* Receipt Header */}
-                  <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-6 text-white">
-                    <div className="flex items-center justify-between mb-4">
-                      <Badge className="bg-white/20 text-white border-0">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Payment Successful
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedPayment(null)}
-                        className="text-white hover:bg-white/20"
-                      >
-                        <X className="h-5 w-5" />
-                      </Button>
-                    </div>
-                    <p className="text-4xl font-black">
-                      {(() => {
-                        const fee =
-                          feeAssignments.find(
-                            (fa) => fa.id === selectedPayment.fee_id,
-                          ) ||
-                          fees.find((f) => f.id === selectedPayment.fee_id);
-                        const currency =
-                          (fee as FeeAssignment)?.currency || "UGX";
-                        return `${currency} ${selectedPayment.amount.toLocaleString()}`;
-                      })()}
-                    </p>
-                    <p className="text-white/80 text-sm mt-1">Payment Amount</p>
-                  </div>
-
-                  <CardContent className="p-6 space-y-4">
-                    {[
-                      {
-                        label: "Transaction Ref",
-                        value: selectedPayment.transaction_ref,
-                      },
-                      {
-                        label: "Payment Method",
-                        value: selectedPayment.payment_method,
-                      },
-                      { label: "Status", value: selectedPayment.status },
-                      {
-                        label: "Date",
-                        value: new Date(
-                          selectedPayment.paid_at,
-                        ).toLocaleString(),
-                      },
-                    ].map((item) => (
-                      <div
-                        key={`item-${item.label}`}
-                        className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
-                      >
-                        <span className="text-muted-foreground">
-                          {item.label}
-                        </span>
-                        <span className="font-semibold">{item.value}</span>
-                      </div>
-                    ))}
-
-                    <div className="grid grid-cols-2 gap-3 pt-4">
-                      <Button
-                        variant="outline"
-                        className="h-12 rounded-xl gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download
-                      </Button>
-                      <Button className="h-12 rounded-xl gap-2 bg-gradient-to-r from-emerald-600 to-teal-600">
-                        <FileText className="h-4 w-4" />
-                        View Receipt
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Quick Actions */}
+        {/* Quick actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
           className="grid sm:grid-cols-3 gap-4"
         >
           {[
             {
               title: "Generate PRN",
-              desc: "Create payment reference",
+              desc: "Create a payment reference",
               icon: Sparkles,
               gradient: "from-primary to-primary/70",
             },
             {
               title: "Payment Statement",
-              desc: "Download full history",
+              desc: "View full history",
               icon: FileText,
               gradient: "from-secondary to-secondary/70",
             },
@@ -1361,9 +964,7 @@ export function PaymentsTab() {
                   </div>
                   <div className="flex-1">
                     <p className="font-bold">{action.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {action.desc}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{action.desc}</p>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                 </CardContent>
@@ -1372,6 +973,99 @@ export function PaymentsTab() {
           ))}
         </motion.div>
       </div>
+
+      {/* Receipt modal */}
+      {selectedTransaction && (
+        <div
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelectedTransaction(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md"
+          >
+            <Card className="border-0 shadow-2xl overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge className="bg-white/20 text-white border-0">
+                    <ShieldCheck className="h-3 w-3 mr-1" />
+                    {selectedTransaction.status}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTransaction(null)}
+                    className="text-white hover:bg-white/20"
+                  >
+                    Close
+                  </Button>
+                </div>
+                <p className="text-4xl font-black">
+                  {formatMoney(selectedTransaction.amount, currency)}
+                </p>
+                <p className="text-white/80 text-sm mt-1">Payment Receipt</p>
+              </div>
+              <CardContent className="p-6 space-y-4">
+                {[
+                  { label: "Transaction Ref", value: selectedTransaction.transactionRef },
+                  { label: "PRN Code", value: selectedTransaction.prnCode },
+                  { label: "Payment Method", value: selectedTransaction.paymentMethod },
+                  { label: "Status", value: selectedTransaction.status },
+                  {
+                    label: "Paid On",
+                    value: new Date(
+                      selectedTransaction.paidAt || selectedTransaction.createdAt,
+                    ).toLocaleString(),
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between py-3 border-b border-border/50 last:border-0"
+                  >
+                    <span className="text-muted-foreground">{item.label}</span>
+                    <span className="font-semibold text-right break-all">{item.value}</span>
+                  </div>
+                ))}
+                <div className="grid grid-cols-2 gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    className="h-12 rounded-xl gap-2"
+                    onClick={() => {
+                      const text = [
+                        "PAYMENT RECEIPT",
+                        `Amount: ${formatMoney(selectedTransaction.amount, currency)}`,
+                        `Ref: ${selectedTransaction.transactionRef}`,
+                        `PRN: ${selectedTransaction.prnCode}`,
+                        `Method: ${selectedTransaction.paymentMethod}`,
+                        `Status: ${selectedTransaction.status}`,
+                        `Date: ${new Date(selectedTransaction.paidAt || selectedTransaction.createdAt).toLocaleString()}`,
+                      ].join("\n");
+                      const blob = new Blob([text], { type: "text/plain" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `receipt-${selectedTransaction.transactionRef}.txt`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast({ title: "Downloaded", description: "Receipt downloaded." });
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                  <Button className="h-12 rounded-xl gap-2 bg-gradient-to-r from-emerald-600 to-teal-600">
+                    <FileText className="h-4 w-4" />
+                    View Receipt
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

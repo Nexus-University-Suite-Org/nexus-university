@@ -7,7 +7,15 @@ const NU_API_BASE_URL =
 const MESSAGING_API_BASE_URL =
   import.meta.env.VITE_WEBMAIL_API_BASE_URL || "http://localhost:8084";
 
-export { MESSAGING_API_BASE_URL };
+// NAD Admissions Dashboard backend (admissions-server) - source of admission/programme records
+const NAD_API_BASE_URL =
+  import.meta.env.VITE_NAD_API_BASE_URL || "http://localhost:8083";
+
+// Registrar backend (port 8082) helpers for university services, office locations, service requests
+const REG_API_BASE_URL =
+  import.meta.env.VITE_REG_API_BASE_URL || "http://localhost:8082";
+
+export { MESSAGING_API_BASE_URL, NAD_API_BASE_URL, REG_API_BASE_URL };
 
 const AUTH_TOKEN_KEY = "nexus-auth-token";
 
@@ -54,6 +62,15 @@ export async function postBackend<T>(
       ...(auth ? authHeaders() : {}),
     },
     body: JSON.stringify(payload),
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+// NAD Admissions Dashboard backend helpers (admissions-server, port 8083)
+export async function getNadBackend<T>(path: string): Promise<T> {
+  const response = await fetch(`${NAD_API_BASE_URL}${path}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
   });
   return handleResponse(response) as Promise<T>;
 }
@@ -127,6 +144,31 @@ export async function postMessagingBackend<T>(
   payload: unknown,
 ): Promise<T> {
   const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+// Registrar backend (port 8082) helpers for university services, office locations, service requests
+function cleanPath(path: string): string {
+  return path.replace(/\/\?/, "?").replace(/\/+$/, "");
+}
+
+export async function getRegBackend<T>(path: string): Promise<T> {
+  const response = await fetch(`${REG_API_BASE_URL}${cleanPath(path)}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(response) as Promise<T>;
+}
+
+export async function postRegBackend<T>(
+  path: string,
+  payload: unknown,
+): Promise<T> {
+  const response = await fetch(`${REG_API_BASE_URL}${cleanPath(path)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

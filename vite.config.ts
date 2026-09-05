@@ -14,6 +14,10 @@ export default defineConfig(({ mode }) => ({
         target: "http://localhost:8082",
         changeOrigin: true,
       },
+      "/api/timetable": {
+        target: "http://localhost:8082",
+        changeOrigin: true,
+      },
       "/api": {
         target: "http://localhost:8081",
         changeOrigin: true,

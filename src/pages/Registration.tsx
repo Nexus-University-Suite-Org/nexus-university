@@ -224,22 +224,44 @@ export default function Registration() {
 
     setSubmitting(true);
     try {
-      // Update profile with registration number and student number
-      await postBackend(
-        `/api/profiles/by-user/${user.uid}/`,
-        {
-          registration_number: registrationNumber.trim(),
-          student_number: studentNumber.trim(),
-          email: profile?.email || user.email,
-        },
-        true,
-      );
+      // Update profile with registration number and student number (best effort,
+      // must not block enrollment if this endpoint is unavailable)
+      try {
+        await postBackend(
+          `/api/profiles/by-user/${user.uid}/`,
+          {
+            registration_number: registrationNumber.trim(),
+            student_number: studentNumber.trim(),
+            email: profile?.email || user.email,
+          },
+          true,
+        );
+      } catch (profileError) {
+        console.warn("Profile update skipped:", profileError);
+      }
+
+      // Resolve the student's Lecturer-Backend profile id by email so the
+      // lecturer portal can display the student's name when reviewing enrollment
+      let studentId = Number(user.uid);
+      try {
+        const lpProfiles = await getMessagingBackend<any[]>(`/api/profiles/`);
+        const lpProfile = (lpProfiles || []).find(
+          (p) =>
+            String(p.email)?.toLowerCase() ===
+            String(user.email || profile?.email || "").toLowerCase(),
+        );
+        if (lpProfile?.id) {
+          studentId = Number(lpProfile.id);
+        }
+      } catch (profileLookupError) {
+        console.warn("LP profile lookup failed, using NAP uid:", profileLookupError);
+      }
 
       // Create enrollments via Lecturer-Backend (port 8084)
       await postMessagingBackend(
         "/api/enrollments/batch",
         selectedCourses.map((courseId) => ({
-          studentId: Number(user.uid),
+          studentId,
           courseId: Number(courseId),
           paperType: paperTypes[courseId] || "normal",
         })),
