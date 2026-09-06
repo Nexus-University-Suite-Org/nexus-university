@@ -92,12 +92,7 @@ jobs:
              ls -la
 
              echo ""
-             echo "=== Step 2: Backing up .env file ==="
-             cp .env /tmp/.env.deployment
-             echo ".env backed up to /tmp/.env.deployment"
-
-             echo ""
-             echo "=== Step 3: Pulling latest code for nexus-university ==="
+             echo "=== Step 2: Pulling latest code for nexus-university ==="
              cd nexus-university
              echo "Current directory: $(pwd)"
              echo "Current commit: $(git log --oneline -1)"
@@ -109,14 +104,7 @@ jobs:
              echo "New commit: $(git log --oneline -1)"
 
              echo ""
-             echo "=== Step 4: Restoring .env file ==="
-             cd ..
-             cp /tmp/.env.deployment .env
-             rm /tmp/.env.deployment
-             echo ".env restored"
-
-             echo ""
-             echo "=== Step 5: Stopping and removing old nu-backend container ==="
+             echo "=== Step 3: Stopping and removing old nu-backend container ==="
              echo "Docker containers before:"
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
              echo ""
@@ -131,14 +119,14 @@ jobs:
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
              echo ""
-             echo "=== Step 6: Building and starting NU Backend container ==="
+             echo "=== Step 4: Building and starting NU Backend container ==="
              docker compose up -d --no-deps --build nu-backend
              echo ""
              echo "Docker containers after:"
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
              echo ""
-             echo "=== Step 7: Checking container logs ==="
+             echo "=== Step 5: Checking container logs ==="
              sleep 5
              echo "=== nu-backend logs (last 30 lines) ==="
              docker logs nu-backend --tail 30 2>&1 || echo "No logs available yet"
