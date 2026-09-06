@@ -116,18 +116,29 @@ jobs:
              echo ".env restored"
 
              echo ""
-             echo "=== Step 5: Building and starting NU Backend container ==="
+             echo "=== Step 5: Stopping and removing old nu-backend container ==="
              echo "Docker containers before:"
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
              echo ""
-             echo "Building and starting nu-backend (only this service, not others)..."
+             echo "Stopping nu-backend container (if running)..."
+             docker compose stop nu-backend 2>/dev/null || true
+             echo "Removing old nu-backend container..."
+             docker compose rm -f nu-backend 2>/dev/null || true
+             echo "Cleaning up any orphaned containers..."
+             docker container prune -f 2>/dev/null || true
+             echo ""
+             echo "Docker containers after cleanup:"
+             docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+             echo ""
+             echo "=== Step 6: Building and starting NU Backend container ==="
              docker compose up -d --no-deps --build nu-backend
              echo ""
              echo "Docker containers after:"
              docker ps -a --filter "name=nu" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
              echo ""
-             echo "=== Step 6: Checking container logs ==="
+             echo "=== Step 7: Checking container logs ==="
              sleep 5
              echo "=== nu-backend logs (last 30 lines) ==="
              docker logs nu-backend --tail 30 2>&1 || echo "No logs available yet"
