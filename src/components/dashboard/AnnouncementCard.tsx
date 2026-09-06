@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+4import { motion } from 'framer-motion';
 import { Megaphone, Pin } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
