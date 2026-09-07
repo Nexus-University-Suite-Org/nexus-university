@@ -59,9 +59,23 @@ type TermResult = {
   term: string;
   gpa: number;
   totalCredits: number;
+  remark?: string;
   entries: Array<
     ExamResultRow & { courseTitle: string; courseCode: string; credits: number }
   >;
+};
+
+const calculateSemesterRemark = (
+  gp: number,
+  grade: string | null,
+): string => {
+  if (!grade) return "—";
+  if (gp >= 3.5) return "Excellent";
+  if (gp >= 3.0) return "Very Good";
+  if (gp >= 2.5) return "Good";
+  if (gp >= 2.0) return "Satisfactory";
+  if (gp >= 1.0) return "Pass";
+  return "Fail";
 };
 
 type DashboardAssignment = {
@@ -191,19 +205,50 @@ export default function Dashboard() {
         setLiveSessionsLoading(true);
         setQuizzesLoading(true);
 
+        // Resolve the 8084 student id from the logged-in email.
+        // user.uid is a NAP user id, not the Lecturer-Backend student id.
+        let messengerStudentId: string | null = null;
+        try {
+          const profiles = await getMessagingBackend<any[]>("/api/profiles/");
+          const match = (Array.isArray(profiles) ? profiles : []).find(
+            (p: any) =>
+              p.email &&
+              String(p.email).toLowerCase() ===
+                String(user.email || "").toLowerCase(),
+          );
+          if (match?.id != null) messengerStudentId = String(match.id);
+        } catch {
+          // Profile lookup unavailable
+        }
+
+        // Course units for course names / codes / credits
+        const courseUnitsMap: Record<string, any> = {};
+        try {
+          const units = await getMessagingBackend<any[]>("/api/course-units/");
+          (Array.isArray(units) ? units : []).forEach((u: any) => {
+            if (u.id != null) courseUnitsMap[String(u.id)] = u;
+          });
+        } catch {
+          // Course units unavailable
+        }
+
         // Fetch grades, quizzes, quiz attempts, live sessions in parallel
         const [gradesData, quizzesData, attemptsData, sessionsData, enrollmentsData] =
           await Promise.all([
-            getMessagingBackend<any[]>(`/api/student-grades/?student_id=${user.uid}`).catch(() => []),
+            messengerStudentId
+              ? getMessagingBackend<any[]>(
+                  `/api/student-grades/?student_id=${messengerStudentId}`,
+                ).catch(() => [])
+              : Promise.resolve([]),
             getMessagingBackend<any[]>("/api/quizzes/?status=active").catch(() => []),
-            getMessagingBackend<any[]>(`/api/quiz-attempts/?student_id=${user.uid}`).catch(() => []),
+            getMessagingBackend<any[]>(`/api/quiz-attempts/?student_id=${messengerStudentId ?? user.uid}`).catch(() => []),
             getMessagingBackend<any[]>("/api/live-sessions/").catch(() => []),
             getMessagingBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`).catch(() => []),
           ]);
 
         // Build term results from student grades
         const gradeList: any[] = Array.isArray(gradesData) ? gradesData : [];
-        const termMap = new Map<string, { entries: typeof termResults extends (infer U)[] ? U extends { entries: (infer E)[] } ? E[] : never : never; totalCredits: number; totalGP: number }>();
+        const termMap = new Map<string, { entries: TermResult["entries"]; totalCredits: number; totalGP: number }>();
 
         for (const g of gradeList) {
           const termKey = `${g.academic_year || "N/A"} - Semester ${g.semester || "?"}`;
@@ -211,7 +256,9 @@ export default function Dashboard() {
             termMap.set(termKey, { entries: [], totalCredits: 0, totalGP: 0 });
           }
           const term = termMap.get(termKey)!;
-          const marks = (g.midterm || 0) + (g.assignment1 || 0) + (g.assignment2 || 0) + (g.final_exam || 0);
+          const marks = Number(g.total) || 0;
+          const credits =
+            g.credits ?? courseUnitsMap[String(g.course_id)]?.credits ?? 3;
           term.entries.push({
             id: String(g.id),
             course_id: String(g.course_id),
@@ -220,12 +267,16 @@ export default function Dashboard() {
             marks,
             grade: g.grade,
             grade_point: g.gp,
-            courseTitle: `Course ${g.course_id}`,
-            courseCode: "",
-            credits: 3,
+            courseTitle:
+              courseUnitsMap[String(g.course_id)]?.name ||
+              g.course_title ||
+              `Course ${g.course_id}`,
+            courseCode:
+              courseUnitsMap[String(g.course_id)]?.code || g.course_code || "",
+            credits,
           });
-          term.totalCredits += 3;
-          term.totalGP += (g.gp || 0) * 3;
+          term.totalCredits += credits;
+          term.totalGP += (g.gp || 0) * credits;
         }
 
         const terms: TermResult[] = [];
@@ -233,7 +284,16 @@ export default function Dashboard() {
         let totalGPAll = 0;
         for (const [termKey, data] of termMap) {
           const gpa = data.totalCredits > 0 ? data.totalGP / data.totalCredits : 0;
-          terms.push({ term: termKey, gpa, totalCredits: data.totalCredits, entries: data.entries });
+          terms.push({
+            term: termKey,
+            gpa,
+            totalCredits: data.totalCredits,
+            entries: data.entries,
+            remark: calculateSemesterRemark(
+              gpa,
+              data.entries[0]?.grade || null,
+            ),
+          });
           totalCreditsAll += data.totalCredits;
           totalGPAll += data.totalGP;
         }
@@ -466,7 +526,7 @@ export default function Dashboard() {
               </div>
               <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-secondary/10 border border-secondary/20 text-center min-w-[90px] sm:min-w-[110px]">
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Terms
+                  Semesters
                 </p>
                 <p className="text-base sm:text-lg font-semibold text-secondary">
                   {resultsLoading ? "…" : termResults.length}
@@ -515,6 +575,17 @@ export default function Dashboard() {
                     style={{ width: `${Math.min(100, (term.gpa / 5) * 100)}%` }}
                   />
                 </div>
+
+                {term.remark && (
+                  <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
+                      Semester Remark
+                    </p>
+                    <p className="text-sm font-bold text-emerald-700">
+                      {term.remark}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   {term.entries.map((res) => (
