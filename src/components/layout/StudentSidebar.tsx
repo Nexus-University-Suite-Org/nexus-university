@@ -13,6 +13,7 @@ import {
   User,
   Settings,
   LogOut,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +25,7 @@ interface StudentSidebarProps {
 
 const studentNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: Zap },
+  { label: "Courses", href: "/courses", icon: Layers },
   { label: "Programs", href: "/programs", icon: BookOpen },
   { label: "Calendar", href: "/academic-calendar", icon: Calendar },
   { label: "Announcements", href: "/announcements", icon: Megaphone },

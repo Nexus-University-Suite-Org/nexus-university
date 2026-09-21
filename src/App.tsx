@@ -39,6 +39,8 @@ import QuizView from "./pages/QuizView";
 import QuizResults from "./pages/QuizResults";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentQuiz from "./pages/StudentQuiz";
+import StudentCourses from "./pages/StudentCourses";
+import CourseContent from "./pages/CourseContent";
 import Announcements from "./pages/Announcements";
 import Programs from "./pages/Programs";
 import NotFound from "./pages/NotFound";
@@ -201,7 +203,15 @@ function AppRoutes() {
         path="/courses"
         element={
           <StudentRoute>
-            <Registration />
+            <StudentCourses />
+          </StudentRoute>
+        }
+      />
+      <Route
+        path="/courses/:unitId"
+        element={
+          <StudentRoute>
+            <CourseContent />
           </StudentRoute>
         }
       />

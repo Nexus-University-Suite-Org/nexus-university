@@ -10,6 +10,7 @@ import {
   Settings,
   Mail,
   LogOut,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 
 const studentNavItems = [
   { label: "Home", href: "/dashboard", icon: Home },
+  { label: "Courses", href: "/courses", icon: Library },
   { label: "Programs", href: "/programs", icon: GraduationCap },
   { label: "Calendar", href: "/academic-calendar", icon: Calendar },
   { label: "Assignments", href: "/assignments", icon: Clipboard },
