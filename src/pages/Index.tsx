@@ -23,16 +23,16 @@ import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { fetchPlatformStats, type PlatformStats } from "@/lib/landingApi";
 
 /**
- * Accent rotation for the capability tiles. Cycling a small palette keeps the
- * light/violet identity while giving the grid enough contrast to scan.
+ * Accent rotation for the capability tiles. Each tone is mapped to the
+ * feature area it represents so the cards feel section-aware and lively.
  */
 const TONES = [
-  { soft: "bg-violet-50 text-violet-600", solid: "group-hover:bg-violet-600" },
-  { soft: "bg-amber-50 text-amber-600", solid: "group-hover:bg-amber-500" },
-  { soft: "bg-teal-50 text-teal-700", solid: "group-hover:bg-teal-600" },
-  { soft: "bg-sky-50 text-sky-600", solid: "group-hover:bg-sky-600" },
-  { soft: "bg-indigo-50 text-indigo-600", solid: "group-hover:bg-indigo-600" },
-  { soft: "bg-rose-50 text-rose-600", solid: "group-hover:bg-rose-600" },
+  { soft: "bg-violet-50 text-violet-700", solid: "group-hover:bg-violet-600", card: "hover:bg-violet-50/60" },
+  { soft: "bg-amber-50 text-amber-700", solid: "group-hover:bg-amber-500", card: "hover:bg-amber-50/70" },
+  { soft: "bg-emerald-50 text-emerald-700", solid: "group-hover:bg-emerald-600", card: "hover:bg-emerald-50/70" },
+  { soft: "bg-sky-50 text-sky-700", solid: "group-hover:bg-sky-600", card: "hover:bg-sky-50/70" },
+  { soft: "bg-rose-50 text-rose-700", solid: "group-hover:bg-rose-600", card: "hover:bg-rose-50/70" },
+  { soft: "bg-indigo-50 text-indigo-700", solid: "group-hover:bg-indigo-600", card: "hover:bg-indigo-50/70" },
 ];
 
 const FEATURES = [
@@ -207,7 +207,7 @@ export default function Index() {
     <div className="min-h-screen bg-white">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-violet-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-emerald-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
       >
         Skip to main content
       </a>
@@ -232,7 +232,7 @@ export default function Index() {
             />
             <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.22)_0%,rgba(255,255,255,0.18)_28%,rgba(255,255,255,0.12)_58%,rgba(255,255,255,0.24)_100%)]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-8%,_hsl(258_90%_60%/0.12),_transparent_52%),radial-gradient(circle_at_15%_30%,_hsl(38_90%_60%/0.08),_transparent_26%)]" />
-            <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-200/30 blur-3xl" />
+            <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-200/30 blur-3xl" />
             <div className="absolute inset-0 opacity-[0.35]" style={{
               backgroundImage:
                 "radial-gradient(hsl(240 5% 65%/0.35) 0.5px, transparent 0.5px)",
@@ -334,7 +334,7 @@ export default function Index() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-80px" }}
                     transition={{ delay: (i % 3) * 0.1, duration: 0.45 }}
-                    className="group rounded-2xl p-3 transition-colors duration-300 hover:bg-zinc-50"
+                    className={`group rounded-2xl border border-transparent p-3 transition-all duration-300 hover:-translate-y-1 hover:border-zinc-200 hover:bg-white hover:shadow-[0_20px_40px_rgba(15,23,42,0.04)] ${tone.card}`}
                   >
                     <div
                       className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${tone.soft} ${tone.solid} transition-all duration-300 group-hover:scale-105 group-hover:text-white`}
@@ -388,7 +388,7 @@ export default function Index() {
                 <h2 className="mb-6 font-display text-3xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
                   Less admin. More time for the actual learning.
                 </h2>
-                <p className="mb-10 text-lg font-light leading-relaxed text-violet-100/85">
+                <p className="mb-10 text-lg font-light leading-relaxed text-violet-50/85">
                   Everything the registrar's office, the finance desk, and
                   your department would each ask you for — collected into a
                   single account you can open on any device.
@@ -409,7 +409,7 @@ export default function Index() {
                         <h3 className="mb-1 font-bold text-white">
                           {point.title}
                         </h3>
-                        <p className="text-sm font-light text-violet-100/75">
+                        <p className="text-sm font-light text-violet-50/75">
                           {point.desc}
                         </p>
                       </div>
@@ -428,7 +428,7 @@ export default function Index() {
         >
           <div className="container">
             <div className="mx-auto mb-16 max-w-2xl text-center">
-              <span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-violet-600">
+              <span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-violet-500">
                 One platform, three doors
               </span>
               <h2 className="mb-5 font-display text-3xl font-extrabold tracking-tight text-[#111827] md:text-4xl">
@@ -544,7 +544,7 @@ export default function Index() {
               {settings.supportEmail && (
                 <a
                   href={`mailto:${settings.supportEmail}`}
-                  className="mt-4 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-violet-600"
+                  className="mt-4 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-emerald-600"
                 >
                   <Mail className="h-4 w-4" />
                   {settings.supportEmail}
@@ -567,7 +567,7 @@ export default function Index() {
                     <li key={link.href}>
                       <a
                         href={link.href}
-                        className="text-zinc-500 transition-colors hover:text-violet-600"
+                        className="text-zinc-500 transition-colors hover:text-emerald-600"
                       >
                         {link.label}
                       </a>
@@ -585,7 +585,7 @@ export default function Index() {
                     <li key={role}>
                       <Link
                         to="/auth"
-                        className="text-zinc-500 transition-colors hover:text-violet-600"
+                        className="text-zinc-500 transition-colors hover:text-emerald-600"
                       >
                         {role} sign in
                       </Link>
