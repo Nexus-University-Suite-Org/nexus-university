@@ -204,7 +204,7 @@ export default function Index() {
   );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#f7f8f4]">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-emerald-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
@@ -306,7 +306,7 @@ export default function Index() {
         {/* Capabilities */}
         <section
           id="features"
-          className="scroll-mt-20 border-t border-zinc-100 bg-white py-24"
+          className="scroll-mt-20 border-t border-[#e7efe5] bg-[#f5faf4] py-24"
         >
           <div className="container">
             <div className="mx-auto mb-16 max-w-3xl text-center">
@@ -424,7 +424,7 @@ export default function Index() {
         {/* Roles */}
         <section
           id="roles"
-          className="scroll-mt-20 border-y border-zinc-100 bg-zinc-50/70 py-24"
+          className="scroll-mt-20 border-y border-[#e7efe5] bg-[#f3f8f1] py-24"
         >
           <div className="container">
             <div className="mx-auto mb-16 max-w-2xl text-center">
@@ -523,7 +523,7 @@ export default function Index() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-100 bg-zinc-50/70 py-14">
+      <footer className="border-t border-[#e7efe5] bg-[#f4f9f3] py-14">
         <div className="container">
           <div className="flex flex-col gap-10 md:flex-row md:justify-between">
             <div className="max-w-xs">
