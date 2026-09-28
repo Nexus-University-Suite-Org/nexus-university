@@ -523,12 +523,12 @@ export default function Index() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#e7efe5] bg-[#f4f9f3] py-14">
-        <div className="container">
-          <div className="flex flex-col gap-10 md:flex-row md:justify-between">
-            <div className="max-w-xs">
+      <footer className="border-t border-[#dfeee1] bg-[linear-gradient(180deg,#edf8ee_0%,#edf7ef_100%)] py-10 sm:py-12 lg:py-14">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-sm md:max-w-xs">
               <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-lime-500 text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#a9d8a2] to-[#6ea66f] text-[#123228] shadow-[0_10px_20px_rgba(110,166,111,0.2)]">
                   {settings.logoUrl ? (
                     <img
                       src={settings.logoUrl}
@@ -539,17 +539,17 @@ export default function Index() {
                     <GraduationCap className="h-5 w-5" />
                   )}
                 </div>
-                <span className="font-display text-lg font-bold tracking-tight text-[#111827]">
+                <span className="font-display text-lg font-bold tracking-tight text-[#173b33]">
                   {settings.siteName}
                 </span>
               </div>
-              <p className="text-sm font-light leading-relaxed text-zinc-500">
+              <p className="text-sm font-medium leading-relaxed text-[#3a4b43]">
                 {settings.tagline}
               </p>
               {settings.supportEmail && (
                 <a
                   href={`mailto:${settings.supportEmail}`}
-                  className="mt-4 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-emerald-600"
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[#355d49] transition-colors hover:text-[#224e3f]"
                 >
                   <Mail className="h-4 w-4" />
                   {settings.supportEmail}
@@ -557,9 +557,9 @@ export default function Index() {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-12 sm:gap-16">
+            <div className="flex w-full max-w-xl flex-col gap-8 sm:flex-row sm:justify-between lg:justify-end lg:gap-16">
               <div>
-                <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
+                <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[#3f5f52]">
                   Explore
                 </h3>
                 <ul className="space-y-2.5 text-sm">
@@ -572,7 +572,7 @@ export default function Index() {
                     <li key={link.href}>
                       <a
                         href={link.href}
-                        className="text-zinc-500 transition-colors hover:text-emerald-600"
+                        className="font-medium text-[#4a5f57] transition-colors hover:text-[#1d473d]"
                       >
                         {link.label}
                       </a>
@@ -582,7 +582,7 @@ export default function Index() {
               </div>
 
               <div>
-                <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
+                <h3 className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[#3f5f52]">
                   Portals
                 </h3>
                 <ul className="space-y-2.5 text-sm">
@@ -590,7 +590,7 @@ export default function Index() {
                     <li key={role}>
                       <Link
                         to="/auth"
-                        className="text-zinc-500 transition-colors hover:text-emerald-600"
+                        className="font-medium text-[#4a5f57] transition-colors hover:text-[#1d473d]"
                       >
                         {role} sign in
                       </Link>
@@ -601,12 +601,12 @@ export default function Index() {
             </div>
           </div>
 
-          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-zinc-200/70 pt-6 text-xs text-zinc-500 sm:flex-row">
+          <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-[#cfe2d0] pt-5 text-xs text-[#496559] sm:flex-row sm:items-center">
             <p>
               © {new Date().getFullYear()} {settings.siteName}. All rights
               reserved.
             </p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#295241]">
               {settings.shortName}
             </p>
           </div>
