@@ -228,15 +228,15 @@ export default function Index() {
             <img
               src="/images/students.jpg"
               alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center opacity-[1] saturate-[1.15] contrast-[1.15] brightness-[0.98]"
+              className="absolute inset-0 h-full w-full object-cover object-center opacity-[1] saturate-[1.1] contrast-[1.12] brightness-[0.7]"
             />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.22)_0%,rgba(255,255,255,0.18)_28%,rgba(255,255,255,0.12)_58%,rgba(255,255,255,0.24)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-8%,_hsl(258_90%_60%/0.12),_transparent_52%),radial-gradient(circle_at_15%_30%,_hsl(38_90%_60%/0.08),_transparent_26%)]" />
-            <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-200/30 blur-3xl" />
-            <div className="absolute inset-0 opacity-[0.35]" style={{
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,20,35,0.78)_0%,rgba(17,31,41,0.68)_35%,rgba(17,31,41,0.44)_55%,rgba(17,31,41,0.7)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(74,222,128,0.18),transparent_28%),radial-gradient(circle_at_85%_28%,rgba(253,230,138,0.12),transparent_20%)]" />
+            <div className="absolute left-1/2 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-300/20 blur-3xl" />
+            <div className="absolute inset-0 opacity-[0.22]" style={{
               backgroundImage:
-                "radial-gradient(hsl(240 5% 65%/0.35) 0.5px, transparent 0.5px)",
-              backgroundSize: "32px 32px",
+                "radial-gradient(hsl(0 0% 100%/0.7) 0.6px, transparent 0.6px)",
+              backgroundSize: "28px 28px",
               maskImage:
                 "radial-gradient(ellipse 70% 60% at 50% 35%, black, transparent)",
               WebkitMaskImage:
@@ -251,22 +251,22 @@ export default function Index() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
-                <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#d8ead5] bg-white/90 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#335d49] shadow-[0_10px_30px_rgba(144,194,137,0.12)] backdrop-blur-md">
-                  <Sparkles className="h-3.5 w-3.5" />
+                <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/8 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#edf9f2] shadow-[0_10px_30px_rgba(16,35,28,0.22)] backdrop-blur-md">
+                  <Sparkles className="h-3.5 w-3.5 text-[#d7f7cf]" />
                   <span>One portal. Every academic need.</span>
                 </div>
 
-                <h1 className="mx-auto mb-6 max-w-5xl text-[2.5rem] font-black leading-[0.95] tracking-[-0.055em] text-[#0f172a] drop-shadow-[0_3px_14px_rgba(255,255,255,0.95)] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.25rem]">
+                <h1 className="mx-auto mb-6 max-w-5xl text-[2.6rem] font-black leading-[0.94] tracking-[-0.055em] text-white drop-shadow-[0_3px_20px_rgba(2,6,23,0.5)] sm:text-[3.8rem] md:text-[4.8rem] lg:text-[5.25rem]">
                   <span className="block">Run your whole</span>
-                  <span className="mt-2 block bg-gradient-to-r from-[#111827] via-[#3d6f59] to-[#9acb8b] bg-clip-text text-transparent drop-shadow-[0_10px_20px_rgba(17,24,39,0.18)]">
+                  <span className="mt-2 block bg-gradient-to-r from-[#fefefe] via-[#dff8e7] to-[#b7e6b5] bg-clip-text text-transparent drop-shadow-[0_10px_20px_rgba(0,0,0,0.2)]">
                     university
                   </span>
-                  <span className="mt-2 block -rotate-1 bg-gradient-to-r from-[#3a7a5d] via-[#8cc58a] to-[#d2f0c5] bg-clip-text font-serif italic text-transparent drop-shadow-[0_12px_20px_rgba(58,122,93,0.18)]">
+                  <span className="mt-2 block -rotate-1 bg-gradient-to-r from-[#f8eec4] via-[#f9d36d] to-[#f3b74f] bg-clip-text font-serif italic text-transparent drop-shadow-[0_12px_20px_rgba(0,0,0,0.18)]">
                     life
                   </span>
                 </h1>
 
-                <p className="mx-auto mb-8 max-w-3xl text-base font-semibold leading-relaxed text-slate-900 drop-shadow-[0_1px_12px_rgba(255,255,255,0.82)] sm:text-lg md:text-xl">
+                <p className="mx-auto mb-8 max-w-3xl text-base font-medium leading-relaxed text-slate-100/95 drop-shadow-[0_1px_12px_rgba(15,23,42,0.72)] sm:text-lg md:text-xl">
                   Register for courses, pay fees, submit assignments, and
                   check your results — without the queues, the paperwork, or
                   the guesswork.
@@ -277,7 +277,7 @@ export default function Index() {
                   {secondaryCta}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-zinc-200 pt-8 sm:gap-6 lg:grid-cols-4 lg:gap-8">
+                <div className="grid grid-cols-2 gap-4 border-t border-white/15 pt-8 sm:gap-6 lg:grid-cols-4 lg:gap-8">
                   {statStrip.map((stat, i) => (
                     <motion.div
                       key={stat.label}
