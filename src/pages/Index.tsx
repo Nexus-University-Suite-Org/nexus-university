@@ -483,31 +483,35 @@ export default function Index() {
           className="scroll-mt-20 bg-white py-24"
         >
           <div className="container">
-            <div className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-lime-700 px-6 py-16 text-center md:px-16 md:py-20">
-              <div
-                className="absolute inset-0 opacity-20"
-                aria-hidden="true"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(hsl(0 0% 100% / 0.5) 0.5px, transparent 0.5px)",
-                  backgroundSize: "28px 28px",
-                }}
-              />
+            <div className="relative isolate mx-auto max-w-4xl overflow-hidden rounded-[32px] border border-emerald-100 bg-[radial-gradient(circle_at_top,_rgba(236,253,245,0.96),_rgba(255,255,255,0.96)_35%,_rgba(245,250,247,1)_100%)] px-6 py-16 text-center shadow-[0_25px_80px_rgba(16,42,31,0.08)] md:px-14 md:py-20">
+              <div className="absolute inset-0 opacity-80" aria-hidden="true">
+                <div className="absolute -left-14 top-8 h-40 w-40 rounded-full bg-emerald-200/40 blur-3xl" />
+                <div className="absolute -right-10 bottom-6 h-44 w-44 rounded-full bg-lime-200/40 blur-3xl" />
+                <div className="absolute inset-0 bg-[radial-gradient(rgba(16,185,129,0.12)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(circle_at_center,black,transparent_80%)]" />
+              </div>
+
               <div className="relative z-10">
-                <LayoutGrid className="mx-auto mb-6 h-9 w-9 text-emerald-200" />
-                <h2 className="mb-4 font-display text-3xl font-extrabold tracking-tight text-white md:text-4xl">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-white/80 shadow-[0_16px_32px_rgba(16,185,129,0.12)] backdrop-blur-sm">
+                  <LayoutGrid className="h-7 w-7 text-emerald-600" />
+                </div>
+
+                <div className="mb-4 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">
+                  Start your journey
+                </div>
+
+                <h2 className="mb-4 font-display text-3xl font-extrabold tracking-[-0.04em] text-[#111827] md:text-5xl">
                   Your next semester starts here
                 </h2>
-                <p className="mx-auto mb-9 max-w-xl text-lg font-light leading-relaxed text-emerald-100/90">
+                <p className="mx-auto mb-9 max-w-2xl text-base font-light leading-relaxed text-zinc-600 md:text-lg">
                   Create an account with your registration details and get
                   access to your courses, results, and fees straight away.
                 </p>
                 <Button
                   size="lg"
                   asChild
-                  className="h-12 rounded-full bg-white px-9 text-base font-semibold text-emerald-700 shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-50"
+                  className="h-14 rounded-full bg-gradient-to-r from-[#eaf8ea] via-[#e0f3df] to-[#d7f0d1] px-8 text-base font-semibold text-[#183d32] shadow-[0_18px_30px_rgba(122,168,123,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_36px_rgba(122,168,123,0.25)]"
                 >
-                  <Link to="/auth">
+                  <Link to="/auth" className="inline-flex items-center">
                     Get started free
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
