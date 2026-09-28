@@ -41,7 +41,7 @@ export function LandingHeader() {
         : "/dashboard";
 
   const brandMark = (
-    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200/60 transition-transform group-hover:scale-105">
+    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#c3e2b5] to-[#9ecb8a] text-[#204734] shadow-lg shadow-emerald-200/60 transition-transform group-hover:scale-105">
       {settings.logoUrl ? (
         <img
           src={settings.logoUrl}
@@ -79,7 +79,7 @@ export function LandingHeader() {
             <a
               key={link.href}
               href={link.href}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-violet-50 hover:text-violet-700"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-700"
             >
               {link.label}
             </a>
@@ -90,7 +90,7 @@ export function LandingHeader() {
           {user ? (
             <Button
               asChild
-              className="h-10 rounded-full bg-violet-600 px-6 font-semibold text-white shadow-lg shadow-violet-200 transition-colors hover:bg-violet-700"
+              className="h-10 rounded-full bg-[#b0d79a] px-6 font-semibold text-[#204a3d] shadow-lg shadow-emerald-200 transition-colors hover:bg-[#9bc989]"
             >
               <Link to={destination}>Open dashboard</Link>
             </Button>
@@ -108,7 +108,7 @@ export function LandingHeader() {
               </Button>
               <Button
                 asChild
-                className="h-10 rounded-full bg-violet-600 px-5 font-semibold text-white shadow-lg shadow-violet-200 transition-colors hover:bg-violet-700"
+                className="h-10 rounded-full bg-[#b0d79a] px-5 font-semibold text-[#204a3d] shadow-lg shadow-emerald-200 transition-colors hover:bg-[#9bc989]"
               >
                 <Link to="/auth">Get started</Link>
               </Button>
@@ -147,7 +147,7 @@ export function LandingHeader() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className="rounded-xl px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-violet-50 hover:text-violet-700"
+                    className="rounded-xl px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-emerald-50 hover:text-emerald-700"
                   >
                     {link.label}
                   </a>
@@ -157,7 +157,7 @@ export function LandingHeader() {
                 {user ? (
                   <Button
                     asChild
-                    className="h-11 w-full rounded-full bg-violet-600 font-semibold text-white hover:bg-violet-700"
+                    className="h-11 w-full rounded-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
                   >
                     <Link to={destination}>Open dashboard</Link>
                   </Button>
@@ -165,7 +165,7 @@ export function LandingHeader() {
                   <>
                     <Button
                       asChild
-                      className="h-11 w-full rounded-full bg-violet-600 font-semibold text-white hover:bg-violet-700"
+                      className="h-11 w-full rounded-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
                     >
                       <Link to="/auth">Get started</Link>
                     </Button>

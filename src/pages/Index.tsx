@@ -27,12 +27,12 @@ import { fetchPlatformStats, type PlatformStats } from "@/lib/landingApi";
  * feature area it represents so the cards feel section-aware and lively.
  */
 const TONES = [
-  { soft: "bg-violet-50 text-violet-700", solid: "group-hover:bg-violet-600", card: "hover:bg-violet-50/60" },
-  { soft: "bg-amber-50 text-amber-700", solid: "group-hover:bg-amber-500", card: "hover:bg-amber-50/70" },
-  { soft: "bg-emerald-50 text-emerald-700", solid: "group-hover:bg-emerald-600", card: "hover:bg-emerald-50/70" },
-  { soft: "bg-sky-50 text-sky-700", solid: "group-hover:bg-sky-600", card: "hover:bg-sky-50/70" },
-  { soft: "bg-rose-50 text-rose-700", solid: "group-hover:bg-rose-600", card: "hover:bg-rose-50/70" },
-  { soft: "bg-indigo-50 text-indigo-700", solid: "group-hover:bg-indigo-600", card: "hover:bg-indigo-50/70" },
+  { soft: "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80", solid: "group-hover:bg-violet-600", card: "border-violet-200/80 bg-white/80 hover:border-violet-300 hover:bg-violet-50/40" },
+  { soft: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80", solid: "group-hover:bg-amber-500", card: "border-amber-200/80 bg-white/80 hover:border-amber-300 hover:bg-amber-50/40" },
+  { soft: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 group-hover:text-white", solid: "group-hover:bg-emerald-600", card: "border-emerald-200/80 bg-white/80 hover:border-emerald-300 hover:bg-emerald-50/40" },
+  { soft: "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80", solid: "group-hover:bg-sky-600", card: "border-sky-200/80 bg-white/80 hover:border-sky-300 hover:bg-sky-50/40" },
+  { soft: "bg-rose-50 text-rose-700 ring-1 ring-rose-200/80", solid: "group-hover:bg-rose-600", card: "border-rose-200/80 bg-white/80 hover:border-rose-300 hover:bg-rose-50/40" },
+  { soft: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/80", solid: "group-hover:bg-indigo-600", card: "border-indigo-200/80 bg-white/80 hover:border-indigo-300 hover:bg-indigo-50/40" },
 ];
 
 const FEATURES = [
@@ -181,7 +181,7 @@ export default function Index() {
     <Button
       size="lg"
       asChild
-      className="h-12 rounded-full bg-gradient-to-r from-violet-600 via-violet-600 to-indigo-600 px-9 text-base font-semibold text-white shadow-[0_18px_38px_rgba(109,40,217,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(109,40,217,0.35)]"
+      className="h-12 rounded-full bg-gradient-to-r from-[#c4e3b9] via-[#b4dca7] to-[#9fcc8f] px-9 text-base font-semibold text-[#204734] shadow-[0_18px_38px_rgba(126,180,125,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(126,180,125,0.28)]"
     >
       <Link to="/auth" className="inline-flex items-center">
         Get started
@@ -251,17 +251,17 @@ export default function Index() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
-                <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/90 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-violet-800 shadow-[0_10px_30px_rgba(109,40,217,0.12)] backdrop-blur-md">
+                <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#d8ead5] bg-white/90 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#335d49] shadow-[0_10px_30px_rgba(144,194,137,0.12)] backdrop-blur-md">
                   <Sparkles className="h-3.5 w-3.5" />
                   <span>One portal. Every academic need.</span>
                 </div>
 
                 <h1 className="mx-auto mb-6 max-w-5xl text-[2.5rem] font-black leading-[0.95] tracking-[-0.055em] text-[#0f172a] drop-shadow-[0_3px_14px_rgba(255,255,255,0.95)] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.25rem]">
                   <span className="block">Run your whole</span>
-                  <span className="mt-2 block bg-gradient-to-r from-[#111827] via-violet-900 to-violet-700 bg-clip-text text-transparent drop-shadow-[0_10px_20px_rgba(17,24,39,0.18)]">
+                  <span className="mt-2 block bg-gradient-to-r from-[#111827] via-[#3d6f59] to-[#9acb8b] bg-clip-text text-transparent drop-shadow-[0_10px_20px_rgba(17,24,39,0.18)]">
                     university
                   </span>
-                  <span className="mt-2 block -rotate-1 bg-gradient-to-r from-violet-800 via-violet-700 to-indigo-700 bg-clip-text font-serif italic text-transparent drop-shadow-[0_12px_20px_rgba(76,29,149,0.2)]">
+                  <span className="mt-2 block -rotate-1 bg-gradient-to-r from-[#3a7a5d] via-[#8cc58a] to-[#d2f0c5] bg-clip-text font-serif italic text-transparent drop-shadow-[0_12px_20px_rgba(58,122,93,0.18)]">
                     life
                   </span>
                 </h1>
@@ -310,14 +310,14 @@ export default function Index() {
         >
           <div className="container">
             <div className="mx-auto mb-16 max-w-3xl text-center">
-              <span className="mb-4 block text-[10px] font-extrabold uppercase tracking-[0.22em] text-violet-600">
+              <span className="mb-4 block text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#5a8e69]">
                 Capabilities
               </span>
               <h2 className="mx-auto mb-5 max-w-3xl text-4xl font-black leading-[0.96] tracking-[-0.05em] text-[#111827] md:text-5xl lg:text-[4rem]">
                 Everything the academic year throws at you,
                 <span className="block">in one place</span>
               </h2>
-              <div className="mx-auto mb-6 h-1.5 w-16 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600" />
+              <div className="mx-auto mb-6 h-1.5 w-16 rounded-full bg-gradient-to-r from-[#b2d7a0] to-[#7bb27d]" />
               <p className="mx-auto max-w-2xl text-lg font-medium leading-relaxed text-zinc-600">
                 No more hunting across email, noticeboards, and departmental
                 offices. The routine work is simply in the portal.
@@ -334,12 +334,12 @@ export default function Index() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-80px" }}
                     transition={{ delay: (i % 3) * 0.1, duration: 0.45 }}
-                    className={`group rounded-2xl border border-transparent p-3 transition-all duration-300 hover:-translate-y-1 hover:border-zinc-200 hover:bg-white hover:shadow-[0_20px_40px_rgba(15,23,42,0.04)] ${tone.card}`}
+                    className={`group rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(15,23,42,0.04)] ${tone.card}`}
                   >
                     <div
                       className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${tone.soft} ${tone.solid} transition-all duration-300 group-hover:scale-105 group-hover:text-white`}
                     >
-                      <feature.icon className="h-6 w-6" />
+                      <feature.icon className="h-6 w-6 text-current" />
                     </div>
                     <h3 className="mb-2.5 text-lg font-bold tracking-tight text-[#111827]">
                       {feature.title}
@@ -357,7 +357,7 @@ export default function Index() {
         {/* Photographic section */}
         <section
           id="platform"
-          className="relative isolate flex min-h-[560px] scroll-mt-20 items-center overflow-hidden bg-violet-950"
+          className="relative isolate flex min-h-[560px] scroll-mt-20 items-center overflow-hidden bg-emerald-950"
         >
           <img
             src="/images/campus-students.jpg"
@@ -366,11 +366,11 @@ export default function Index() {
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-r from-violet-950/95 via-violet-900/85 to-violet-950/60"
+            className="absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-900/85 to-emerald-950/60"
             aria-hidden="true"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-t from-violet-950/70 via-transparent to-violet-950/40"
+            className="absolute inset-0 bg-gradient-to-t from-emerald-950/70 via-transparent to-emerald-950/40"
             aria-hidden="true"
           />
 
@@ -382,13 +382,13 @@ export default function Index() {
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55 }}
               >
-                <span className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300">
+                <span className="mb-4 block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-300">
                   Built around your week
                 </span>
-                <h2 className="mb-6 font-display text-3xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
+                <h2 className="mb-6 font-display text-3xl font-extrabold leading-[1.05] tracking-[-0.04em] text-white md:text-5xl">
                   Less admin. More time for the actual learning.
                 </h2>
-                <p className="mb-10 text-lg font-light leading-relaxed text-violet-50/85">
+                <p className="mb-10 max-w-xl text-lg font-medium leading-relaxed text-emerald-50/90">
                   Everything the registrar's office, the finance desk, and
                   your department would each ask you for — collected into a
                   single account you can open on any device.
@@ -402,14 +402,14 @@ export default function Index() {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true, margin: "-60px" }}
                       transition={{ delay: i * 0.12, duration: 0.45 }}
-                      className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-colors hover:border-violet-300/30 hover:bg-white/10"
+                      className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-colors hover:border-emerald-300/30 hover:bg-white/10"
                     >
-                      <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-violet-300" />
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300" />
                       <div>
-                        <h3 className="mb-1 font-bold text-white">
+                        <h3 className="mb-1 text-base font-bold text-white">
                           {point.title}
                         </h3>
-                        <p className="text-sm font-light text-violet-50/75">
+                        <p className="text-sm font-medium leading-relaxed text-emerald-50/80">
                           {point.desc}
                         </p>
                       </div>
@@ -428,7 +428,7 @@ export default function Index() {
         >
           <div className="container">
             <div className="mx-auto mb-16 max-w-2xl text-center">
-              <span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-violet-500">
+              <span className="mb-3 block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">
                 One platform, three doors
               </span>
               <h2 className="mb-5 font-display text-3xl font-extrabold tracking-tight text-[#111827] md:text-4xl">
@@ -448,9 +448,9 @@ export default function Index() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
                   transition={{ delay: i * 0.12, duration: 0.45 }}
-                  className="group flex flex-col rounded-3xl border border-zinc-200/80 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-100/60"
+                  className="group flex flex-col rounded-3xl border border-zinc-200/80 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100/60"
                 >
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200/70 transition-transform duration-300 group-hover:scale-110">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-lime-500 text-white shadow-lg shadow-emerald-200/70 transition-transform duration-300 group-hover:scale-110">
                     <role.icon className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2.5 font-display text-xl font-bold tracking-tight text-[#111827]">
@@ -465,7 +465,7 @@ export default function Index() {
                         key={point}
                         className="flex items-center gap-2.5 text-sm text-zinc-600"
                       >
-                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-violet-500" />
+                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500" />
                         {point}
                       </li>
                     ))}
@@ -482,7 +482,7 @@ export default function Index() {
           className="scroll-mt-20 bg-white py-24"
         >
           <div className="container">
-            <div className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-violet-700 to-indigo-800 px-6 py-16 text-center md:px-16 md:py-20">
+            <div className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-lime-700 px-6 py-16 text-center md:px-16 md:py-20">
               <div
                 className="absolute inset-0 opacity-20"
                 aria-hidden="true"
@@ -493,18 +493,18 @@ export default function Index() {
                 }}
               />
               <div className="relative z-10">
-                <LayoutGrid className="mx-auto mb-6 h-9 w-9 text-violet-200" />
+                <LayoutGrid className="mx-auto mb-6 h-9 w-9 text-emerald-200" />
                 <h2 className="mb-4 font-display text-3xl font-extrabold tracking-tight text-white md:text-4xl">
                   Your next semester starts here
                 </h2>
-                <p className="mx-auto mb-9 max-w-xl text-lg font-light leading-relaxed text-violet-100/90">
+                <p className="mx-auto mb-9 max-w-xl text-lg font-light leading-relaxed text-emerald-100/90">
                   Create an account with your registration details and get
                   access to your courses, results, and fees straight away.
                 </p>
                 <Button
                   size="lg"
                   asChild
-                  className="h-12 rounded-full bg-white px-9 text-base font-semibold text-violet-700 shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-violet-50"
+                  className="h-12 rounded-full bg-white px-9 text-base font-semibold text-emerald-700 shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-50"
                 >
                   <Link to="/auth">
                     Get started free
@@ -523,7 +523,7 @@ export default function Index() {
           <div className="flex flex-col gap-10 md:flex-row md:justify-between">
             <div className="max-w-xs">
               <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-lime-500 text-white">
                   {settings.logoUrl ? (
                     <img
                       src={settings.logoUrl}
