@@ -64,7 +64,7 @@ export default function Auth() {
   ];
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-[radial-gradient(circle_at_top_left,_rgba(194,234,201,0.62),_transparent_35%),linear-gradient(135deg,#f4f9f3_0%,#eef3ef_100%)]">
       {/* Left Panel - Decorative */}
       <motion.div
         initial={{ opacity: 0, x: -50 }}
@@ -199,16 +199,18 @@ export default function Auth() {
       </motion.div>
 
       {/* Right Panel - Form */}
-      <div className="flex-1 bg-[#f7f7f5] flex items-center justify-center p-4 sm:p-6 lg:p-12">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(170,215,178,0.22),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(136,196,152,0.18),_transparent_32%)]" />
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="relative z-10 w-full max-w-[520px] rounded-[28px] border border-[#dfeee3] bg-white/80 p-6 shadow-[0_25px_80px_rgba(15,40,26,0.08)] backdrop-blur-xl sm:p-7"
         >
           {/* Mobile Logo */}
-          <Link to="/" className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-3 mb-8 lg:hidden">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#a8dfb2] to-[#73c88b] flex items-center justify-center shadow-[0_10px_20px_rgba(99,175,118,0.35)]">
               {settings.logoUrl ? (
                 <img
                   src={settings.logoUrl}
@@ -216,37 +218,41 @@ export default function Auth() {
                   className="h-6 w-6 object-contain"
                 />
               ) : (
-                <GraduationCap className="h-6 w-6 text-primary-foreground" />
+                <GraduationCap className="h-6 w-6 text-[#15322a]" />
               )}
             </div>
-            <span className="font-display text-xl font-bold">
+            <span className="font-display text-xl font-bold text-[#1a2b20]">
               {settings.shortName}
             </span>
           </Link>
 
           {/* Form Header */}
           <div className="mb-8">
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-[#111827] mb-3">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d9efd9] bg-[#f0f9f2] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#2b5c3d]">
+              <Sparkles className="h-3.5 w-3.5 text-[#5bbd7d]" />
+              Secure access
+            </div>
+            <h1 className="font-display text-3xl md:text-4xl font-bold text-[#122320] mb-3 leading-none">
               Welcome back
             </h1>
-            <p className="text-[#4e5a63] text-lg">
+            <p className="text-[#4d5f57] text-lg">
               Sign in with your student credentials
             </p>
           </div>
 
           <form onSubmit={handleSignIn} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="identifier" className="text-sm font-medium text-[#23313f]">
+              <Label htmlFor="identifier" className="text-sm font-medium text-[#213a31]">
                 Student / Registration Number or Email
               </Label>
               <div className="relative">
-                <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7a7f84]" />
+                <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#4c8e62]" />
                 <Input
                   id="identifier"
                   placeholder="21/U/12345/PS, 2100712345 or email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="h-14 pl-12 text-base rounded-xl border-[#d9e2e5] bg-white text-[#1f2a37] shadow-[0_0_0_1px_rgba(148,163,184,0.04)] focus-visible:ring-[#d1b065] focus-visible:ring-offset-0"
+                  className="h-14 pl-12 text-base rounded-2xl border-[#cfe7d1] bg-[#f7fbf7] text-[#1f2a37] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all duration-200 focus-visible:ring-[#9dd1a8] focus-visible:ring-offset-0 focus-visible:border-[#9dd1a8]"
                   required
                 />
               </div>
@@ -254,32 +260,32 @@ export default function Auth() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium text-[#23313f]">
+                <Label htmlFor="password" className="text-sm font-medium text-[#213a31]">
                   Password
                 </Label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-[#d08d20] hover:text-[#b8760a] font-medium"
+                  className="text-sm text-[#4d8d66] hover:text-[#37714f] font-medium transition-colors"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#7a7f84]" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#4c8e62]" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-14 pl-12 pr-12 text-base rounded-xl border-[#d9e2e5] bg-white text-[#1f2a37] shadow-[0_0_0_1px_rgba(148,163,184,0.04)] focus-visible:ring-[#d1b065] focus-visible:ring-offset-0"
+                  className="h-14 pl-12 pr-12 text-base rounded-2xl border-[#cfe7d1] bg-[#f7fbf7] text-[#1f2a37] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all duration-200 focus-visible:ring-[#9dd1a8] focus-visible:ring-offset-0 focus-visible:border-[#9dd1a8]"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7a7f84] hover:text-[#1f2a37] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#597b67] hover:text-[#183a2a] transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -292,7 +298,7 @@ export default function Auth() {
 
             <Button
               type="submit"
-              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-[#f4b965] to-[#e89d2c] text-[#1b2a36] hover:brightness-[1.02] rounded-xl shadow-[0_18px_30px_rgba(232,157,44,0.28)] group"
+              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-[#bfe8bf] via-[#9ed9a4] to-[#7cc98d] text-[#163229] hover:brightness-[1.02] rounded-2xl shadow-[0_18px_30px_rgba(92,170,112,0.30)] group border border-[#a6d6ad]"
               disabled={loading}
             >
               {loading ? (
