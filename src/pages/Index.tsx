@@ -448,24 +448,25 @@ export default function Index() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
                   transition={{ delay: i * 0.12, duration: 0.45 }}
-                  className="group flex flex-col rounded-3xl border border-zinc-200/80 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100/60"
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  className="group flex flex-col rounded-[28px] border border-[#dfeee0] bg-[#f8fdf7] p-7 shadow-[0_18px_40px_rgba(76,118,82,0.06)] transition-all duration-300 hover:-translate-y-1 hover:border-[#cfe7d3] hover:shadow-[0_22px_50px_rgba(118,161,119,0.12)]"
                 >
-                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-lime-500 text-white shadow-lg shadow-emerald-200/70 transition-transform duration-300 group-hover:scale-110">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dff6d8] via-[#cfecc3] to-[#b7dfae] text-[#244d3d] shadow-[0_12px_26px_rgba(132,182,122,0.2)] transition-transform duration-300 group-hover:scale-110">
                     <role.icon className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2.5 font-display text-xl font-bold tracking-tight text-[#111827]">
                     {role.title}
                   </h3>
-                  <p className="mb-6 flex-1 text-sm font-light leading-relaxed text-zinc-500">
+                  <p className="mb-6 flex-1 text-sm font-medium leading-relaxed text-zinc-600">
                     {role.desc}
                   </p>
-                  <ul className="space-y-2.5 border-t border-zinc-100 pt-5">
+                  <ul className="space-y-2.5 border-t border-[#e4efe2] pt-5">
                     {role.points.map((point) => (
                       <li
                         key={point}
-                        className="flex items-center gap-2.5 text-sm text-zinc-600"
+                        className="flex items-center gap-2.5 text-sm font-medium text-zinc-700"
                       >
-                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500" />
+                        <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-[#79b27e]" />
                         {point}
                       </li>
                     ))}
