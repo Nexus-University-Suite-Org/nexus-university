@@ -402,14 +402,14 @@ export default function Index() {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true, margin: "-60px" }}
                       transition={{ delay: i * 0.12, duration: 0.45 }}
-                      className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-colors hover:border-emerald-300/30 hover:bg-white/10"
+                      className="flex gap-4 rounded-2xl border border-white/20 bg-white/12 p-5 shadow-[0_18px_36px_rgba(4,9,20,0.15)] backdrop-blur-md transition-colors hover:border-emerald-300/40 hover:bg-white/15"
                     >
                       <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300" />
                       <div>
-                        <h3 className="mb-1 text-base font-bold text-white">
+                        <h3 className="mb-1 text-base font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
                           {point.title}
                         </h3>
-                        <p className="text-sm font-medium leading-relaxed text-emerald-50/80">
+                        <p className="text-sm font-medium leading-relaxed text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.28)]">
                           {point.desc}
                         </p>
                       </div>
