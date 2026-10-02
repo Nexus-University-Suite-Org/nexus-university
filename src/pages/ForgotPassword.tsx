@@ -573,14 +573,23 @@ export default function ForgotPassword() {
         transition={{ duration: 0.6 }}
         className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden"
       >
-        <div className="absolute inset-0 hero-gradient" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--secondary)/0.3)_0%,_transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(var(--accent)/0.2)_0%,_transparent_50%)]" />
-
+        <img
+          src="/images/students.jpg"
+          alt="" 
+          className="absolute inset-0 h-full w-full object-cover object-center brightness-[0.72] contrast-[1.08] saturate-[1.05]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.78)_0%,rgba(27,55,78,0.72)_35%,rgba(17,115,128,0.34)_72%,rgba(38,165,144,0.38)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.12)_0%,_transparent_55%)]" />
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.22]"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundImage:
+              "radial-gradient(rgba(255,255,255,0.9) 0.8px, transparent 0.8px)",
+            backgroundSize: "26px 26px",
+            maskImage:
+              "radial-gradient(circle at center, black 38%, transparent 100%)",
+            WebkitMaskImage:
+              "radial-gradient(circle at center, black 38%, transparent 100%)",
           }}
         />
 
