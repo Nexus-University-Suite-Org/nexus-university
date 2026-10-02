@@ -29,4 +29,17 @@ spring:
             enable: true
 
 server:
-  port: 8081
+  port: ${PORT:8081}
+
+---
+# Activated on Railway via SPRING_PROFILES_ACTIVE=postgres.
+# Railway exposes DATABASE_URL as "postgresql://...", which is not a valid JDBC
+# URL, so the connection is assembled from the PG* variables instead.
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
