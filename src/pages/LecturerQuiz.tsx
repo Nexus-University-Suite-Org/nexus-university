@@ -26,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, getMessagingBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 import { autoCloseExpiredQuizzes } from "@/lib/quizUtils";
 
@@ -89,7 +89,7 @@ export default function LecturerQuiz() {
       setLoading(true);
       if (!user?.uid) return;
 
-      const data = await getBackend<any[]>(
+      const data = await getMessagingBackend<any[]>(
         `/api/quizzes/?lecturer_id=${encodeURIComponent(user.uid)}`,
       );
 
@@ -179,7 +179,7 @@ export default function LecturerQuiz() {
       // Fetch lecturer's course units via API
       const assignedRawCourses: any[] = [];
       try {
-        const courseUnitsData = await getBackend<any[]>("/api/course-units/");
+        const courseUnitsData = await getMessagingBackend<any[]>("/api/course-units/");
         if (courseUnitsData && courseUnitsData.length > 0) {
           courseUnitsData.forEach((course: any) => {
             assignedRawCourses.push({
@@ -246,7 +246,7 @@ export default function LecturerQuiz() {
 
   const handleDeleteQuiz = async (quizId: string) => {
     try {
-        await postBackend(`/api/quizzes/${quizId}/action/`, { action: "delete" });
+        await postMessagingBackend(`/api/quizzes/${quizId}/action/`, { action: "delete" });
 
         toast({
           title: "Success",
@@ -286,7 +286,7 @@ export default function LecturerQuiz() {
         lowest_score: 0,
       };
 
-      const newQuiz = await postBackend<any>("/api/quizzes/", newQuizData);
+      const newQuiz = await postMessagingBackend<any>("/api/quizzes/", newQuizData);
       const newQuizId = newQuiz.id;
 
       toast({

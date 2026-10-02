@@ -41,8 +41,7 @@ interface AppLayoutProps {
 
 const studentNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: Zap },
-  { label: "Courses", href: "/courses", icon: Layers },
-  { label: "Programs", href: "/programs", icon: BookOpen },
+{ label: "Courses", href: "/courses", icon: Layers },
   { label: "Calendar", href: "/academic-calendar", icon: Calendar },
   { label: "Announcements", href: "/announcements", icon: Megaphone },
   { label: "Assignments", href: "/assignments", icon: Clipboard },

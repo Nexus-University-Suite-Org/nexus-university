@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend } from "@/lib/backendApi";
+import { getMessagingBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 
 interface QuizAttempt {
@@ -88,7 +88,7 @@ export default function QuizResults() {
 
   const loadQuiz = async () => {
     try {
-      const quizData = await getBackend<any>(`/api/quizzes/${id}/`);
+      const quizData = await getMessagingBackend<any>(`/api/quizzes/${id}/`);
       if (!quizData) throw new Error("Quiz not found");
       setQuiz(quizData);
     } catch (error: any) {
@@ -105,7 +105,7 @@ export default function QuizResults() {
     try {
       const fetchData = async () => {
         if (!id) return;
-        const attemptsData = await getBackend<any[]>(`/api/quiz-attempts/?quiz_id=${id}`);
+        const attemptsData = await getMessagingBackend<any[]>(`/api/quiz-attempts/?quiz_id=${id}`);
 
         if (!attemptsData || attemptsData.length === 0) {
           setAttempts([]);
@@ -139,23 +139,25 @@ export default function QuizResults() {
               student_name: attempt.student_name || "Unknown Student",
               student_email: attempt.student_email || "",
               score: attempt.score,
-              total_points: quiz?.total_points || 0,
+              total_points: attempt.total_points || quiz?.total_points || 0,
               percentage:
-                attempt.score !== null &&
-                quiz?.total_points &&
-                quiz.total_points > 0
-                  ? Math.round((attempt.score / quiz.total_points) * 100)
-                  : null,
-              time_taken: timeTaken,
+                attempt.percentage != null
+                  ? attempt.percentage
+                  : attempt.score !== null &&
+                      quiz?.total_points &&
+                      quiz.total_points > 0
+                    ? Math.round((attempt.score / quiz.total_points) * 100)
+                    : null,
+              time_taken: attempt.time_taken != null ? attempt.time_taken : timeTaken,
               completed_at:
                 attempt.completed_at ||
                 attempt.started_at ||
                 new Date().toISOString(),
-              passed:
+              passed: attempt.passed != null ? attempt.passed :
                 attempt.score !== null
                   ? attempt.score >= (quiz?.passing_score || 0)
                   : null,
-              status: attempt.score !== null ? "graded" : "submitted",
+              status: attempt.status || (attempt.score !== null ? "graded" : "submitted"),
               answers: attempt.answers || {},
             };
           },
@@ -231,7 +233,7 @@ export default function QuizResults() {
     setViewingAttempt(attempt);
 
     try {
-      const questionsData = await getBackend<any[]>(`/api/questions/?quiz_id=${id}`);
+      const questionsData = await getMessagingBackend<any[]>(`/api/questions/?quiz_id=${id}`);
       setQuizQuestions(questionsData || []);
     } catch (error) {
       console.error("Error loading questions:", error);
@@ -627,7 +629,6 @@ export default function QuizResults() {
                   </Badge>
                 </div>
               </div>
-              ){"}"}
             </div>
           </div>
         </div>

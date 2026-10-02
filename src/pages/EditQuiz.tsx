@@ -30,7 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, getMessagingBackend, postBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 
 interface CourseOption {
@@ -95,6 +95,9 @@ export default function EditQuiz() {
     shuffleQuestions: false,
     showAnswers: false,
     autoDeactivate: true,
+    semester: "1",
+    academicYear: "2025/2026",
+    yearOfStudy: 1,
   });
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -150,7 +153,7 @@ export default function EditQuiz() {
       setLoading(true);
       if (!id) return;
 
-      const qData = await getBackend<any>(`/api/quizzes/${id}/`);
+      const qData = await getMessagingBackend<any>(`/api/quizzes/${id}/`);
       if (!qData) {
         toast({
           title: "Error",
@@ -187,9 +190,12 @@ export default function EditQuiz() {
         shuffleQuestions: qData.shuffle_questions || false,
         showAnswers: qData.show_answers || false,
         autoDeactivate: qData.auto_deactivate !== false,
+        semester: qData.semester || "1",
+        academicYear: qData.academic_year || "2025/2026",
+        yearOfStudy: qData.year_of_study || 1,
       });
 
-      const questionsData = await getBackend<any[]>(`/api/questions/?quiz_id=${id}`);
+      const questionsData = await getMessagingBackend<any[]>(`/api/questions/?quiz_id=${id}`);
       setQuestions(questionsData || []);
     } catch (error: any) {
       console.error("Error loading quiz:", error);
@@ -237,6 +243,9 @@ export default function EditQuiz() {
         shuffle_questions: quizData.shuffleQuestions,
         show_answers: quizData.showAnswers,
         auto_deactivate: quizData.autoDeactivate,
+        semester: quizData.semester,
+        academic_year: quizData.academicYear,
+        year_of_study: quizData.yearOfStudy,
         questions: questions.map((q) => ({
           question: q.question,
           type: q.type,
@@ -563,6 +572,65 @@ export default function EditQuiz() {
                     <SelectItem value="closed">Closed</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Semester</Label>
+                  <Select
+                    value={quizData.semester}
+                    onValueChange={(value) =>
+                      setQuizData({ ...quizData, semester: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Semester 1</SelectItem>
+                      <SelectItem value="2">Semester 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Academic Year</Label>
+                  <Select
+                    value={quizData.academicYear}
+                    onValueChange={(value) =>
+                      setQuizData({ ...quizData, academicYear: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2025/2026">2025/2026</SelectItem>
+                      <SelectItem value="2024/2025">2024/2025</SelectItem>
+                      <SelectItem value="2026/2027">2026/2027</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Year of Study</Label>
+                  <Select
+                    value={String(quizData.yearOfStudy)}
+                    onValueChange={(value) =>
+                      setQuizData({ ...quizData, yearOfStudy: parseInt(value) })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Year 1</SelectItem>
+                      <SelectItem value="2">Year 2</SelectItem>
+                      <SelectItem value="3">Year 3</SelectItem>
+                      <SelectItem value="4">Year 4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex items-center space-x-6">

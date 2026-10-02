@@ -7,9 +7,7 @@ import {
   User,
   BookOpen,
   Download,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
   Video,
   Bell,
   Share2,
@@ -18,10 +16,10 @@ import {
   FileText,
   Link as LinkIcon,
   Check,
-  X as CloseIcon,
   FileCheck,
   AlertCircle,
   Loader2,
+  CalendarRange,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getTimetableShareUrl } from "@/lib/config";
@@ -36,9 +34,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -67,196 +73,111 @@ interface Assignment {
   };
 }
 
-// Sample course data - In production, this would come from your database
-const courses = [
-  {
-    id: 1,
-    code: "CS-401",
-    title: "Advanced Data Structures",
-    instructor: "Dr. Sarah Chen",
-    color: "from-indigo-500 to-blue-500",
-    textColor: "text-blue-600",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-200",
-  },
-  {
-    id: 2,
-    code: "CS-402",
-    title: "Database Systems & Cloud",
-    instructor: "Prof. James Okonkwo",
-    color: "from-emerald-500 to-teal-500",
-    textColor: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-200",
-  },
-  {
-    id: 3,
-    code: "CS-403",
-    title: "Software Engineering",
-    instructor: "Dr. Emily Nakamura",
-    color: "from-purple-500 to-fuchsia-500",
-    textColor: "text-purple-600",
-    bgColor: "bg-purple-50",
-    borderColor: "border-purple-200",
-  },
-  {
-    id: 4,
-    code: "CS-404",
-    title: "Machine Learning",
-    instructor: "Prof. Ahmed Hassan",
-    color: "from-orange-500 to-red-500",
-    textColor: "text-orange-600",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-200",
-  },
-  {
-    id: 5,
-    code: "CS-405",
-    title: "Network Security",
-    instructor: "Dr. Lisa Wong",
-    color: "from-rose-500 to-pink-500",
-    textColor: "text-rose-600",
-    bgColor: "bg-rose-50",
-    borderColor: "border-rose-200",
-  },
-  {
-    id: 6,
-    code: "CS-406",
-    title: "Web Technologies",
-    instructor: "Prof. Michael Brown",
-    color: "from-cyan-500 to-blue-500",
-    textColor: "text-cyan-600",
-    bgColor: "bg-cyan-50",
-    borderColor: "border-cyan-200",
-  },
-];
+interface TimetableEntry {
+  id: number;
+  program: string;
+  program_code?: string | null;
+  academic_year: string;
+  semester: number;
+  year_of_study: number;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  room: string;
+  session_type?: string | null;
+  is_online: boolean;
+  lecturer_name?: string | null;
+  course_unit_id?: number | null;
+  course_unit_code?: string | null;
+  course_unit_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
 
-// Timetable schedule
-const schedule = [
-  {
-    day: "Monday",
-    sessions: [
-      {
-        courseId: 1,
-        time: "08:00 - 10:00",
-        room: "Lab 4",
-        type: "Lecture",
-        online: false,
-      },
-      {
-        courseId: 2,
-        time: "10:30 - 12:30",
-        room: "Innovation Hub",
-        type: "Lab",
-        online: false,
-      },
-      {
-        courseId: 4,
-        time: "14:00 - 16:00",
-        room: "Main Hall",
-        type: "Lecture",
-        online: true,
-      },
-    ],
-  },
-  {
-    day: "Tuesday",
-    sessions: [
-      {
-        courseId: 3,
-        time: "08:00 - 10:00",
-        room: "SE Studio",
-        type: "Workshop",
-        online: false,
-      },
-      {
-        courseId: 5,
-        time: "11:00 - 13:00",
-        room: "Security Lab",
-        type: "Lab",
-        online: false,
-      },
-      {
-        courseId: 6,
-        time: "15:00 - 17:00",
-        room: "Web Dev Lab",
-        type: "Practical",
-        online: false,
-      },
-    ],
-  },
-  {
-    day: "Wednesday",
-    sessions: [
-      {
-        courseId: 2,
-        time: "09:00 - 11:00",
-        room: "Online",
-        type: "Tutorial",
-        online: true,
-      },
-      {
-        courseId: 1,
-        time: "11:30 - 13:30",
-        room: "Lab 4",
-        type: "Lab",
-        online: false,
-      },
-      {
-        courseId: 4,
-        time: "14:00 - 16:00",
-        room: "AI Lab",
-        type: "Practical",
-        online: false,
-      },
-    ],
-  },
-  {
-    day: "Thursday",
-    sessions: [
-      {
-        courseId: 3,
-        time: "08:00 - 10:00",
-        room: "SE Studio",
-        type: "Lecture",
-        online: false,
-      },
-      {
-        courseId: 6,
-        time: "10:30 - 12:30",
-        room: "Web Dev Lab",
-        type: "Lab",
-        online: false,
-      },
-      {
-        courseId: 5,
-        time: "14:00 - 16:00",
-        room: "Online",
-        type: "Lecture",
-        online: true,
-      },
-    ],
-  },
-  {
-    day: "Friday",
-    sessions: [
-      {
-        courseId: 1,
-        time: "08:00 - 10:00",
-        room: "Main Hall",
-        type: "Review",
-        online: false,
-      },
-      {
-        courseId: 2,
-        time: "10:30 - 12:30",
-        room: "Innovation Hub",
-        type: "Project",
-        online: false,
-      },
-    ],
-  },
-];
+// Shape used by the grid rendering
+interface Session {
+  courseId: string;
+  time: string;
+  room: string;
+  type: string;
+  online: boolean;
+  entry: TimetableEntry;
+}
+
+interface Palette {
+  color: string;
+  textColor: string;
+  bgColor: string;
+  borderColor: string;
+}
+
+const palette = (
+  index: number,
+): Palette => {
+  const palettes = [
+    {
+      color: "from-indigo-500 to-blue-500",
+      textColor: "text-blue-700",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-300",
+    },
+    {
+      color: "from-emerald-500 to-teal-500",
+      textColor: "text-emerald-700",
+      bgColor: "bg-emerald-50",
+      borderColor: "border-emerald-300",
+    },
+    {
+      color: "from-purple-500 to-fuchsia-500",
+      textColor: "text-purple-700",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-300",
+    },
+    {
+      color: "from-orange-500 to-red-500",
+      textColor: "text-orange-700",
+      bgColor: "bg-orange-50",
+      borderColor: "border-orange-300",
+    },
+    {
+      color: "from-rose-500 to-pink-500",
+      textColor: "text-rose-700",
+      bgColor: "bg-rose-50",
+      borderColor: "border-rose-300",
+    },
+    {
+      color: "from-cyan-500 to-blue-500",
+      textColor: "text-cyan-700",
+      bgColor: "bg-cyan-50",
+      borderColor: "border-cyan-300",
+    },
+    {
+      color: "from-amber-500 to-orange-500",
+      textColor: "text-amber-700",
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-300",
+    },
+    {
+      color: "from-lime-500 to-green-500",
+      textColor: "text-lime-700",
+      bgColor: "bg-lime-50",
+      borderColor: "border-lime-300",
+    },
+    {
+      color: "from-sky-500 to-indigo-500",
+      textColor: "text-sky-700",
+      bgColor: "bg-sky-50",
+      borderColor: "border-sky-300",
+    },
+    {
+      color: "from-fuchsia-500 to-purple-500",
+      textColor: "text-fuchsia-700",
+      bgColor: "bg-fuchsia-50",
+      borderColor: "border-fuchsia-300",
+    },
+  ];
+  return palettes[index % palettes.length];
+};
 
 const timeSlots = [
   "08:00",
@@ -272,79 +193,128 @@ const timeSlots = [
   "18:00",
 ];
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const toMinutes = (time: string): number => {
+  const [h, m] = time.split(":").map((n) => parseInt(n, 10));
+  return h * 60 + (isNaN(m) ? 0 : m);
+};
+
+const formatTime = (time: string): string => {
+  const [h, m] = time.split(":").map((n) => parseInt(n, 10));
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  const suffix = h >= 12 ? "PM" : "AM";
+  return `${hour}:${(m || 0).toString().padStart(2, "0")} ${suffix}`;
+};
+
+const normalizeName = (s: string): string =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 export default function Timetable() {
   const { user } = useAuth();
   const [view, setView] = useState<"week" | "list">("week");
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
-  const [dynamicCourses, setDynamicCourses] = useState<any[]>([]);
-  const [submissionStatuses, setSubmissionStatuses] = useState<
-    Map<string, string>
-  >(new Map());
+  const [loadingTimetable, setLoadingTimetable] = useState(true);
+  const [entries, setEntries] = useState<TimetableEntry[]>([]);
+  const [filterProgram, setFilterProgram] = useState<string>("auto");
+  const [filterYear, setFilterYear] = useState<string>("");
+  const [filterSemester, setFilterSemester] = useState<string>("");
+  const [filterLevel, setFilterLevel] = useState<string>("");
   const timetableRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
+  const openSessionDetails = (session: Session) => {
+    setSelectedSession(session);
+  };
 
   const currentDay = days[new Date().getDay() - 1] || "Monday";
   const timetableUrl = getTimetableShareUrl();
 
-  // Helper to get color for a course index
-  const getCourseColors = (index: number) => {
-    const palettes = [
-      {
-        color: "from-indigo-500 to-blue-500",
-        textColor: "text-blue-600",
-        bgColor: "bg-blue-50",
-        borderColor: "border-blue-200",
-      },
-      {
-        color: "from-emerald-500 to-teal-500",
-        textColor: "text-emerald-600",
-        bgColor: "bg-emerald-50",
-        borderColor: "border-emerald-200",
-      },
-      {
-        color: "from-purple-500 to-fuchsia-500",
-        textColor: "text-purple-600",
-        bgColor: "bg-purple-50",
-        borderColor: "border-purple-200",
-      },
-      {
-        color: "from-orange-500 to-red-500",
-        textColor: "text-orange-600",
-        bgColor: "bg-orange-50",
-        borderColor: "border-orange-200",
-      },
-      {
-        color: "from-rose-500 to-pink-500",
-        textColor: "text-rose-600",
-        bgColor: "bg-rose-50",
-        borderColor: "border-rose-200",
-      },
-      {
-        color: "from-cyan-500 to-blue-500",
-        textColor: "text-cyan-600",
-        bgColor: "bg-cyan-50",
-        borderColor: "border-cyan-200",
-      },
-    ];
-    return palettes[index % palettes.length];
-  };
+  // Distinct options available in the published timetable
+  const meta = useMemo(() => {
+    const programs = new Set<string>();
+    const years = new Set<string>();
+    const semesters = new Set<number>();
+    const levels = new Set<number>();
+    entries.forEach((e) => {
+      programs.add(e.program);
+      years.add(e.academic_year);
+      semesters.add(e.semester);
+      levels.add(e.year_of_study);
+    });
+    const sortedYears = Array.from(years);
+    const sortedSemesters = Array.from(semesters).sort((a, b) => a - b);
+    const sortedLevels = Array.from(levels).sort((a, b) => a - b);
+    return {
+      programs: Array.from(programs),
+      years: sortedYears,
+      semesters: sortedSemesters,
+      levels: sortedLevels,
+    };
+  }, [entries]);
 
-  // Fetch all data from the API backend
+  // Auto-select program + term once the timetable loads
+  useEffect(() => {
+    if (meta.programs.length === 0) return;
+
+    const mine = user?.programme || user?.department || "";
+    const mineNorm = normalizeName(mine);
+    const matched =
+      mineNorm.length > 0
+        ? meta.programs.find(
+            (p) =>
+              normalizeName(p).includes(mineNorm) ||
+              mineNorm.includes(normalizeName(p)),
+          )
+        : undefined;
+
+    setFilterProgram((prev) =>
+      prev === "auto"
+        ? matched
+          ? matched
+          : "all"
+        : prev,
+    );
+    if (!filterYear && meta.years.length > 0) setFilterYear(meta.years[0]);
+    if (!filterSemester && meta.semesters.length > 0)
+      setFilterSemester(String(meta.semesters[0]));
+    if (!filterLevel && meta.levels.length > 0)
+      setFilterLevel(String(meta.levels[0]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, user]);
+
+  // Fetch timetable from REG-Backend (via /api/timetable proxy) + NAP data
   useEffect(() => {
     if (!user) return;
 
-    const fetchData = async () => {
+    const fetchTimetable = async () => {
       try {
-        setLoadingAssignments(true);
+        const res = await fetch(`/api/timetable`, {
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) {
+          throw new Error(`Timetable backend error ${res.status}`);
+        }
+        // Same ApiResponse envelope as academic-calendar
+        const body = await res.json();
+        const data = body?.data ?? body;
+        setEntries(Array.isArray(data) ? data : []);
+      } catch (error: any) {
+        console.error("Error fetching timetable:", error);
+      } finally {
+        setLoadingTimetable(false);
+      }
+    };
 
-        // 1. Get enrolled courses
+    fetchTimetable();
+
+    const fetchAssignments = async () => {
+      try {
         const enrollments: any[] = await getBackend(
           `/api/enrollments/?student_id=${user.uid}`,
         );
@@ -357,25 +327,9 @@ export default function Timetable() {
 
         if (enrolledCourseIds.length === 0) {
           setAssignments([]);
-          setDynamicCourses([]);
-          setLoadingAssignments(false);
           return;
         }
 
-        // Build course list from enrollment inline data
-        const coursesList: any[] = [];
-        const courseMap = new Map();
-        approvedEnrollments.forEach((e: any) => {
-          if (e.course) {
-            const colors = getCourseColors(coursesList.length);
-            const courseInfo = { ...e.course, ...colors };
-            courseMap.set(e.course_id, courseInfo);
-            coursesList.push(courseInfo);
-          }
-        });
-        setDynamicCourses(coursesList);
-
-        // 2. Fetch assignments for enrolled courses
         const courseIdsStr = enrolledCourseIds.join(",");
         const now = new Date().toISOString();
         const allAssignments: any[] = await getBackend(
@@ -385,7 +339,6 @@ export default function Timetable() {
           (a: any) => a.due_date >= now,
         );
 
-        // 3. Fetch submission statuses
         const assignmentIds = upcomingAssignments.map((a: any) => a.id);
         const statusMap = new Map<string, string>();
         if (assignmentIds.length > 0) {
@@ -398,7 +351,6 @@ export default function Timetable() {
           });
         }
 
-        // Map assignments with course and status
         const mapped: Assignment[] = upcomingAssignments.map((a: any) => ({
           id: a.id,
           title: a.title,
@@ -415,23 +367,67 @@ export default function Timetable() {
 
         setAssignments(mapped);
       } catch (error: any) {
-        console.error("Error fetching timetable data:", error);
-        toast({
-          title: "Could not load timetable data",
-          description: error.message || "Please refresh the page to try again.",
-          variant: "destructive",
-        });
+        console.error("Error fetching assignments:", error);
       } finally {
         setLoadingAssignments(false);
       }
     };
 
-    fetchData();
+    fetchAssignments();
   }, [user]);
 
-  const getCourseById = (id: string | number) =>
-    dynamicCourses.find((c) => c.id === id) ||
-    courses.find((c) => c.id === (typeof id === "string" ? id : id)); // Keep fallback for mocked schedule
+  // Apply the student filters
+  const filteredEntries = useMemo(() => {
+    return entries.filter((e) => {
+      if (filterProgram && filterProgram !== "auto" && filterProgram !== "all") {
+        if (e.program !== filterProgram) return false;
+      }
+      if (filterYear && e.academic_year !== filterYear) return false;
+      if (filterSemester && e.semester !== Number(filterSemester)) return false;
+      if (filterLevel && e.year_of_study !== Number(filterLevel)) return false;
+      return true;
+    });
+  }, [entries, filterProgram, filterYear, filterSemester, filterLevel]);
+
+  // Build course catalog from the filtered sessions
+  const courseCatalog = useMemo(() => {
+    const map = new Map<string, { code: string; title: string; instructor: string; palette: Palette }>();
+    filteredEntries.forEach((e) => {
+      const key = e.course_unit_code || e.course_unit_name || `Unit ${e.id}`;
+      if (!map.has(key)) {
+        const pals = palette(map.size);
+        map.set(key, {
+          code: e.course_unit_code || key,
+          title: e.course_unit_name || e.course_unit_code || "Course Unit",
+          instructor: e.lecturer_name || "Teaching Staff",
+          palette: pals,
+        });
+      }
+    });
+    return map;
+  }, [filteredEntries]);
+
+  const sessionsByDay = useMemo(() => {
+    const byDay: Record<string, Session[]> = {};
+    days.forEach((d) => (byDay[d] = []));
+    filteredEntries.forEach((e) => {
+      if (!byDay[e.day_of_week]) return;
+      byDay[e.day_of_week].push({
+        courseId: e.course_unit_code || e.course_unit_name || `Unit ${e.id}`,
+        time: `${e.start_time} - ${e.end_time}`,
+        room: e.room,
+        type: e.session_type || "Lecture",
+        online: e.is_online,
+        entry: e,
+      });
+    });
+    days.forEach((d) =>
+      byDay[d].sort((a, b) => toMinutes(a.entry.start_time) - toMinutes(b.entry.start_time)),
+    );
+    return byDay;
+  }, [filteredEntries]);
+
+  const getCourseById = (id: string) => courseCatalog.get(id);
 
   // Share functionality
   const handleShare = async () => {
@@ -450,7 +446,6 @@ export default function Timetable() {
         });
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
-          // User cancelled, don't show error
           copyToClipboard();
         }
       }
@@ -554,9 +549,9 @@ export default function Timetable() {
 
   const renderWeekView = () => (
     <div className="overflow-x-auto">
-      <div className="min-w-[1000px]">
+      <div className="min-w-[1100px]">
         {/* Time Grid Header */}
-        <div className="grid grid-cols-6 gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-2 mb-2">
           <div className="text-sm font-semibold text-muted-foreground"></div>
           {days.map((day) => (
             <div
@@ -582,7 +577,7 @@ export default function Timetable() {
         </div>
 
         {/* Timetable Grid */}
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-7 gap-2">
           {/* Time column */}
           <div className="space-y-2">
             {timeSlots.map((time) => (
@@ -597,7 +592,7 @@ export default function Timetable() {
 
           {/* Day columns */}
           {days.map((day) => {
-            const daySchedule = schedule.find((s) => s.day === day);
+            const daySessions = sessionsByDay[day];
             return (
               <div
                 key={day}
@@ -607,7 +602,7 @@ export default function Timetable() {
                 )}
               >
                 {timeSlots.map((time, index) => {
-                  const session = daySchedule?.sessions.find((s) => {
+                  const session = daySessions.find((s) => {
                     const sessionStartHour = parseInt(s.time.split(":")[0]);
                     const slotHour = parseInt(time.split(":")[0]);
                     return sessionStartHour === slotHour;
@@ -621,14 +616,15 @@ export default function Timetable() {
 
                     return (
                       <motion.div
-                        key={`${day}-${time}`}
+                        key={`${day}-${time}-${session.entry.id}`}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.02 }}
+                        onClick={() => openSessionDetails(session)}
                         className={cn(
                           "relative h-20 rounded-lg border-l-4 p-3 shadow-sm hover:shadow-md transition-all cursor-pointer group",
-                          course?.bgColor,
-                          course?.borderColor,
+                          course?.palette.bgColor,
+                          course?.palette.borderColor,
                         )}
                         style={{
                           minHeight: duration > 2 ? "160px" : "80px",
@@ -640,7 +636,7 @@ export default function Timetable() {
                               <h4
                                 className={cn(
                                   "font-bold text-xs line-clamp-1",
-                                  course?.textColor,
+                                  course?.palette.textColor,
                                 )}
                               >
                                 {course?.code}
@@ -688,6 +684,14 @@ export default function Timetable() {
                                 <BookOpen className="h-3 w-3" />
                                 <span>{session.type}</span>
                               </div>
+                              <div className="flex items-center gap-2 text-xs">
+                                <CalendarRange className="h-3 w-3" />
+                                <span>
+                                  {session.entry.academic_year} · Y
+                                  {session.entry.year_of_study} · Sem{" "}
+                                  {session.entry.semester}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -717,120 +721,116 @@ export default function Timetable() {
 
   const renderListView = () => (
     <div className="space-y-6">
-      {schedule.map((daySchedule, dayIndex) => (
-        <motion.div
-          key={daySchedule.day}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: dayIndex * 0.1 }}
-        >
-          <Card
-            className={cn(
-              "overflow-hidden",
-              daySchedule.day === currentDay && "border-secondary shadow-lg",
-            )}
+      {days.map((day, dayIndex) => {
+        const daySessions = sessionsByDay[day];
+        if (daySessions.length === 0) return null;
+        return (
+          <motion.div
+            key={day}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: dayIndex * 0.1 }}
           >
-            <div
+            <Card
               className={cn(
-                "px-6 py-4 border-b",
-                daySchedule.day === currentDay
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-muted/50",
+                "overflow-hidden",
+                day === currentDay && "border-secondary shadow-lg",
               )}
             >
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">{daySchedule.day}</h3>
-                {daySchedule.day === currentDay && (
-                  <Badge variant="secondary" className="bg-background/20">
-                    Today
-                  </Badge>
+              <div
+                className={cn(
+                  "px-6 py-4 border-b",
+                  day === currentDay
+                    ? "bg-secondary text-secondary-foreground"
+                    : "bg-muted/50",
                 )}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold">{day}</h3>
+                  <Badge variant="secondary">
+                    {daySessions.length} session{daySessions.length === 1 ? "" : "s"}
+                  </Badge>
+                </div>
               </div>
-            </div>
-            <div className="p-6 space-y-4">
-              {daySchedule.sessions.map((session, sessionIndex) => {
-                const course = getCourseById(session.courseId);
-                return (
-                  <motion.div
-                    key={sessionIndex}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: dayIndex * 0.1 + sessionIndex * 0.05 }}
-                    className={cn(
-                      "relative p-4 rounded-lg border-l-4 hover:shadow-md transition-all cursor-pointer",
-                      course?.bgColor,
-                      course?.borderColor,
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4
-                            className={cn(
-                              "font-bold text-lg",
-                              course?.textColor,
-                            )}
-                          >
-                            {course?.code}
-                          </h4>
-                          <Badge variant="outline" className="text-xs">
-                            {session.type}
-                          </Badge>
-                          {session.online && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs gap-1"
+              <div className="p-6 space-y-4">
+                {daySessions.map((session, sessionIndex) => {
+                  const course = getCourseById(session.courseId);
+                  return (
+                    <motion.div
+                      key={`${day}-${sessionIndex}-${session.entry.id}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: dayIndex * 0.1 + sessionIndex * 0.05 }}
+                      onClick={() => openSessionDetails(session)}
+                      className={cn(
+                        "relative p-4 rounded-lg border-l-4 hover:shadow-md transition-all cursor-pointer",
+                        course?.palette.bgColor,
+                        course?.palette.borderColor,
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4
+                              className={cn(
+                                "font-bold text-lg",
+                                course?.palette.textColor,
+                              )}
                             >
-                              <Video className="h-3 w-3" />
-                              Online
+                              {course?.code}
+                            </h4>
+                            <Badge variant="outline" className="text-xs">
+                              {session.type}
                             </Badge>
-                          )}
+                            {session.online && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs gap-1"
+                              >
+                                <Video className="h-3 w-3" />
+                                Online
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-foreground mb-1">
+                            {course?.title}
+                          </p>
+                          <div className="flex flex-wrap gap-4 mt-3">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <User className="h-4 w-4" />
+                              <span>{course?.instructor}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              <span>{session.time}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <MapPin className="h-4 w-4" />
+                              <span>{session.room}</span>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          {course?.title}
-                        </p>
-                        <div className="flex flex-wrap gap-4 mt-3">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <User className="h-4 w-4" />
-                            <span>{course?.instructor}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>{session.time}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{session.room}</span>
-                          </div>
+                        <div className="text-right flex-shrink-0">
+                          <Badge variant="secondary">
+                            Y{session.entry.year_of_study} · Sem{" "}
+                            {session.entry.semester}
+                          </Badge>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="flex-shrink-0"
-                      >
-                        <Bell className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </Card>
-        </motion.div>
-      ))}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </Card>
+          </motion.div>
+        );
+      })}
     </div>
   );
 
   const todaysSessions = useMemo(() => {
-    const today = schedule.find((s) => s.day === currentDay);
-    return (
-      today?.sessions.map((session) => ({
-        ...session,
-        course: getCourseById(session.courseId),
-      })) || []
-    );
-  }, [currentDay]);
+    return sessionsByDay[currentDay] || [];
+  }, [sessionsByDay, currentDay]);
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -846,10 +846,10 @@ export default function Timetable() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-secondary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Teaching Timetable
+                My Timetable
               </h1>
               <p className="text-muted-foreground mt-2">
-                Your weekly class schedule at a glance
+                Your weekly class schedule published by the registrar
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -907,6 +907,83 @@ export default function Timetable() {
             </div>
           </div>
 
+          {/* Term Filters */}
+          <Card className="p-4">
+            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground pr-2">
+                <CalendarRange className="h-4 w-4" />
+                Published for:
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
+                <Select
+                  value={filterProgram === "auto" ? "all" : filterProgram}
+                  onValueChange={setFilterProgram}
+                  disabled={meta.programs.length === 0}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All programs</SelectItem>
+                    {meta.programs.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filterYear}
+                  onValueChange={setFilterYear}
+                  disabled={meta.years.length === 0}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Academic year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meta.years.map((y) => (
+                      <SelectItem key={y} value={y}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filterSemester}
+                  onValueChange={setFilterSemester}
+                  disabled={meta.semesters.length === 0}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meta.semesters.map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        Semester {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filterLevel}
+                  onValueChange={setFilterLevel}
+                  disabled={meta.levels.length === 0}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Year of study" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meta.levels.map((lvl) => (
+                      <SelectItem key={lvl} value={String(lvl)}>
+                        Year {lvl}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Card>
+
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="p-4">
@@ -915,7 +992,7 @@ export default function Timetable() {
                   <BookOpen className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{dynamicCourses.length}</p>
+                  <p className="text-2xl font-bold">{courseCatalog.size}</p>
                   <p className="text-xs text-muted-foreground">Courses</p>
                 </div>
               </div>
@@ -939,12 +1016,7 @@ export default function Timetable() {
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {schedule.reduce(
-                      (acc, day) => acc + day.sessions.length,
-                      0,
-                    )}
-                  </p>
+                  <p className="text-2xl font-bold">{filteredEntries.length}</p>
                   <p className="text-xs text-muted-foreground">
                     Weekly Sessions
                   </p>
@@ -958,11 +1030,7 @@ export default function Timetable() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {schedule.reduce(
-                      (acc, day) =>
-                        acc + day.sessions.filter((s) => s.online).length,
-                      0,
-                    )}
+                    {filteredEntries.filter((s) => s.is_online).length}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Online Classes
@@ -1103,55 +1171,100 @@ export default function Timetable() {
                   <TabsTrigger value="week">Week View</TabsTrigger>
                   <TabsTrigger value="list">List View</TabsTrigger>
                 </TabsList>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filter
-                </Button>
+                <Badge variant="outline" className="gap-1">
+                  <ChevronDown className="h-3 w-3" />
+                  {filterProgram === "all" ? "All programs" : filterProgram || "My program"}
+                </Badge>
               </div>
 
               <TabsContent value="week" className="mt-6">
-                {renderWeekView()}
+                {loadingTimetable ? (
+                  <Card className="p-10 flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <p className="text-sm">Loading timetable...</p>
+                  </Card>
+                ) : filteredEntries.length === 0 ? (
+                  <Card className="p-10">
+                    <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground text-center">
+                      <CalendarIcon className="h-10 w-10" />
+                      <p className="font-medium text-foreground">
+                        No classes scheduled yet
+                      </p>
+                      <p className="text-sm max-w-md">
+                        Your timetable for this term hasn't been published by the
+                        registrar yet. Check back soon or switch the filters above.
+                      </p>
+                    </div>
+                  </Card>
+                ) : (
+                  renderWeekView()
+                )}
               </TabsContent>
 
               <TabsContent value="list" className="mt-6">
-                {renderListView()}
+                {loadingTimetable ? (
+                  <Card className="p-10 flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <p className="text-sm">Loading timetable...</p>
+                  </Card>
+                ) : filteredEntries.length === 0 ? (
+                  <Card className="p-10">
+                    <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground text-center">
+                      <CalendarIcon className="h-10 w-10" />
+                      <p className="font-medium text-foreground">
+                        No classes scheduled yet
+                      </p>
+                      <p className="text-sm max-w-md">
+                        Your timetable for this term hasn't been published by the
+                        registrar yet. Check back soon or switch the filters above.
+                      </p>
+                    </div>
+                  </Card>
+                ) : (
+                  renderListView()
+                )}
               </TabsContent>
             </Tabs>
           </div>
 
           {/* Course Legend */}
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Course Legend</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {dynamicCourses.map((course) => (
-                <div
-                  key={course.id}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border-l-4",
-                    course.bgColor,
-                    course.borderColor,
-                  )}
-                >
+          {courseCatalog.size > 0 && (
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">Course Legend</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from(courseCatalog.values()).map((course) => (
                   <div
+                    key={course.code}
                     className={cn(
-                      "w-3 h-3 rounded-full",
-                      `bg-gradient-to-br ${course.color}`,
+                      "flex items-center gap-3 p-3 rounded-lg border-l-4",
+                      course.palette.bgColor,
+                      course.palette.borderColor,
                     )}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={cn("font-semibold text-sm", course.textColor)}
-                    >
-                      {course.code}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {course.title}
-                    </p>
+                  >
+                    <div
+                      className={cn(
+                        "w-3 h-3 rounded-full bg-gradient-to-br",
+                        course.palette.color,
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={cn(
+                          "font-semibold text-sm",
+                          course.palette.textColor,
+                        )}
+                      >
+                        {course.code}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {course.title}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+                ))}
+              </div>
+            </Card>
+          )}
         </motion.div>
       </main>
 
@@ -1221,6 +1334,134 @@ export default function Timetable() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Session Details Dialog */}
+      <Dialog
+        open={!!selectedSession}
+        onOpenChange={(open) => {
+          if (!open) setSelectedSession(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 pr-8">
+              <div
+                className={`w-3 h-3 rounded-full bg-gradient-to-br ${
+                  selectedSession
+                    ? (getCourseById(selectedSession.courseId)?.palette.color ??
+                      "from-indigo-500 to-blue-500")
+                    : "from-indigo-500 to-blue-500"
+                }`}
+              />
+              {selectedSession?.entry.course_unit_name ||
+                selectedSession?.entry.course_unit_code ||
+                "Session"}
+            </DialogTitle>
+            <DialogDescription className="pt-1">
+              {selectedSession?.entry.course_unit_code}: {selectedSession?.entry.course_unit_name}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedSession && (
+            <div className="space-y-3 py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>{selectedSession.entry.session_type || "Lecture"}</Badge>
+                {selectedSession.online ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <Video className="h-3 w-3" />
+                    Online
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">On campus</Badge>
+                )}
+                <Badge variant="outline">
+                  {selectedSession.entry.academic_year}
+                </Badge>
+              </div>
+
+              <div className="space-y-3 rounded-xl border border-border p-4">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Day</p>
+                    <p className="text-sm font-medium">
+                      {selectedSession.entry.day_of_week}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Time</p>
+                    <p className="text-sm font-medium">
+                      {formatTime(selectedSession.entry.start_time)} –{" "}
+                      {formatTime(selectedSession.entry.end_time)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Venue</p>
+                    <p className="text-sm font-medium">
+                      {selectedSession.online
+                        ? "Online"
+                        : selectedSession.room || "Not specified"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <User className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Lecturer</p>
+                    <p className="text-sm font-medium">
+                      {selectedSession.entry.lecturer_name || "Teaching Staff"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <BookOpen className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Course Unit</p>
+                    <p className="text-sm font-medium">
+                      {selectedSession.entry.course_unit_name || "—"}
+                    </p>
+                    {selectedSession.entry.course_unit_code && (
+                      <p className="text-xs text-muted-foreground">
+                        Code: {selectedSession.entry.course_unit_code}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CalendarRange className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Program / Class</p>
+                    <p className="text-sm font-medium">
+                      {selectedSession.entry.program}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Year {selectedSession.entry.year_of_study} · Semester{" "}
+                      {selectedSession.entry.semester} ·{" "}
+                      {selectedSession.entry.academic_year}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setSelectedSession(null)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

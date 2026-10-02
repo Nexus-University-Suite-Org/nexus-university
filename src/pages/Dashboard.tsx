@@ -28,7 +28,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -37,7 +36,7 @@ import { UpcomingCard } from "@/components/dashboard/UpcomingCard";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getMessagingBackend, MESSAGING_API_BASE_URL } from "@/lib/backendApi";
 
 type ResultCourse = {
   title: string;
@@ -60,9 +59,23 @@ type TermResult = {
   term: string;
   gpa: number;
   totalCredits: number;
+  remark?: string;
   entries: Array<
     ExamResultRow & { courseTitle: string; courseCode: string; credits: number }
   >;
+};
+
+const calculateSemesterRemark = (
+  gp: number,
+  grade: string | null,
+): string => {
+  if (!grade) return "—";
+  if (gp >= 3.5) return "Excellent";
+  if (gp >= 3.0) return "Very Good";
+  if (gp >= 2.5) return "Good";
+  if (gp >= 2.0) return "Satisfactory";
+  if (gp >= 1.0) return "Pass";
+  return "Fail";
 };
 
 type DashboardAssignment = {
@@ -83,6 +96,7 @@ interface LiveSession {
   scheduledAt: string;
   durationMinutes?: number | null;
   meetLink?: string | null;
+  imageUrl?: string | null;
   isLive: boolean;
 }
 
@@ -128,10 +142,6 @@ export default function Dashboard() {
   const [termResults, setTermResults] = useState<TermResult[]>([]);
   const [cgpa, setCgpa] = useState(0);
   const [showClassDialog, setShowClassDialog] = useState(false);
-  const [classAction, setClassAction] = useState<"join" | "create">("join");
-  const [joinCode, setJoinCode] = useState("");
-  const [className, setClassName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignments, setAssignments] = useState<DashboardAssignment[]>([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
@@ -195,20 +205,160 @@ export default function Dashboard() {
         setLiveSessionsLoading(true);
         setQuizzesLoading(true);
 
-        const data = await getBackend<DashboardData>(
-          `/api/students/${user.uid}/dashboard/`,
-          true,
+        // Resolve the 8084 student id from the logged-in email.
+        // user.uid is a NAP user id, not the Lecturer-Backend student id.
+        let messengerStudentId: string | null = null;
+        try {
+          const profiles = await getMessagingBackend<any[]>("/api/profiles/");
+          const match = (Array.isArray(profiles) ? profiles : []).find(
+            (p: any) =>
+              p.email &&
+              String(p.email).toLowerCase() ===
+                String(user.email || "").toLowerCase(),
+          );
+          if (match?.id != null) messengerStudentId = String(match.id);
+        } catch {
+          // Profile lookup unavailable
+        }
+
+        // Course units for course names / codes / credits
+        const courseUnitsMap: Record<string, any> = {};
+        try {
+          const units = await getMessagingBackend<any[]>("/api/course-units/");
+          (Array.isArray(units) ? units : []).forEach((u: any) => {
+            if (u.id != null) courseUnitsMap[String(u.id)] = u;
+          });
+        } catch {
+          // Course units unavailable
+        }
+
+        // Fetch grades, quizzes, quiz attempts, live sessions in parallel
+        const [gradesData, quizzesData, attemptsData, sessionsData, enrollmentsData] =
+          await Promise.all([
+            messengerStudentId
+              ? getMessagingBackend<any[]>(
+                  `/api/student-grades/?student_id=${messengerStudentId}`,
+                ).catch(() => [])
+              : Promise.resolve([]),
+            getMessagingBackend<any[]>("/api/quizzes/?status=active").catch(() => []),
+            getMessagingBackend<any[]>(`/api/quiz-attempts/?student_id=${messengerStudentId ?? user.uid}`).catch(() => []),
+            getMessagingBackend<any[]>("/api/live-sessions/").catch(() => []),
+            getMessagingBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`).catch(() => []),
+          ]);
+
+        // Build term results from student grades
+        const gradeList: any[] = Array.isArray(gradesData) ? gradesData : [];
+        const termMap = new Map<string, { entries: TermResult["entries"]; totalCredits: number; totalGP: number }>();
+
+        for (const g of gradeList) {
+          const termKey = `${g.academic_year || "N/A"} - Semester ${g.semester || "?"}`;
+          if (!termMap.has(termKey)) {
+            termMap.set(termKey, { entries: [], totalCredits: 0, totalGP: 0 });
+          }
+          const term = termMap.get(termKey)!;
+          const marks = Number(g.total) || 0;
+          const credits =
+            g.credits ?? courseUnitsMap[String(g.course_id)]?.credits ?? 3;
+          term.entries.push({
+            id: String(g.id),
+            course_id: String(g.course_id),
+            academic_year: g.academic_year || "",
+            semester: g.semester || "",
+            marks,
+            grade: g.grade,
+            grade_point: g.gp,
+            courseTitle:
+              courseUnitsMap[String(g.course_id)]?.name ||
+              g.course_title ||
+              `Course ${g.course_id}`,
+            courseCode:
+              courseUnitsMap[String(g.course_id)]?.code || g.course_code || "",
+            credits,
+          });
+          term.totalCredits += credits;
+          term.totalGP += (g.gp || 0) * credits;
+        }
+
+        const terms: TermResult[] = [];
+        let totalCreditsAll = 0;
+        let totalGPAll = 0;
+        for (const [termKey, data] of termMap) {
+          const gpa = data.totalCredits > 0 ? data.totalGP / data.totalCredits : 0;
+          terms.push({
+            term: termKey,
+            gpa,
+            totalCredits: data.totalCredits,
+            entries: data.entries,
+            remark: calculateSemesterRemark(
+              gpa,
+              data.entries[0]?.grade || null,
+            ),
+          });
+          totalCreditsAll += data.totalCredits;
+          totalGPAll += data.totalGP;
+        }
+        const cgpa = totalCreditsAll > 0 ? totalGPAll / totalCreditsAll : 0;
+
+        setTermResults(terms);
+        setCgpa(cgpa);
+        const approvedEnrollments = (Array.isArray(enrollmentsData) ? enrollmentsData : []).filter(
+          (e: any) => e.status === "approved",
+        );
+        setStats({
+          enrolled: approvedEnrollments.length,
+          completed: 0,
+          assignments: 0,
+          liveMeets: 0,
+        });
+
+        // Build upcoming quizzes
+        const quizList: any[] = Array.isArray(quizzesData) ? quizzesData : [];
+        setUpcomingQuizzes(
+          quizList.map((q: any) => ({
+            id: String(q.id),
+            title: q.title,
+            courseTitle: q.course_title || null,
+            courseCode: q.course_code || null,
+            startDate: q.start_date || null,
+            endDate: q.end_date || null,
+            isLive: q.status === "active",
+            isScheduled: q.status === "scheduled",
+          })),
         );
 
-        setStats(data.stats);
-        setTermResults(data.results.terms);
-        setCgpa(data.results.cgpa);
-        setLiveSessions(data.live_sessions);
-        setUpcomingQuizzes(data.quizzes);
-        setAssignments(data.assignments);
-      } catch (error) {
-        console.error("Error loading dashboard data", error);
-        setAssignmentsError("Failed to load dashboard data.");
+        // Build scheduled Google Meet classes
+        const now = new Date();
+        const sessionList: LiveSession[] = (
+          Array.isArray(sessionsData) ? sessionsData : []
+        )
+          .map((s: any) => {
+            const start = new Date(s.scheduled_at);
+            const duration = (s.duration_minutes ?? 60) * 60000;
+            const end = new Date(start.getTime() + duration);
+            return {
+              id: String(s.id),
+              title: s.title || "Online Class",
+              courseName: s.course_name || null,
+              scheduledAt: s.scheduled_at,
+              durationMinutes: s.duration_minutes ?? null,
+              meetLink: s.meet_link || null,
+              imageUrl: s.image_url || null,
+              isLive:
+                !Number.isNaN(start.getTime()) && now >= start && now <= end,
+            } as LiveSession;
+          })
+          .sort(
+            (a, b) =>
+              new Date(a.scheduledAt).getTime() -
+              new Date(b.scheduledAt).getTime(),
+          );
+        setLiveSessions(sessionList);
+        setStats((prev) => ({
+          ...prev,
+          liveMeets: sessionList.filter((s) => s.isLive).length,
+        }));
+      } catch {
+        // Dashboard gracefully degrades — show empty state
       } finally {
         setLoadingStats(false);
         setResultsLoading(false);
@@ -254,72 +404,8 @@ export default function Dashboard() {
     [liveSessions],
   );
 
-  const handleJoinClass = async () => {
-    if (!joinCode.trim()) {
-      alert("Please enter a valid join code");
-      return;
-    }
-
-    if (!user) {
-      alert("You must be logged in to join a class");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await postBackend(
-        "/api/classrooms/join/",
-        {
-          join_code: joinCode.trim(),
-          student_id: user.uid,
-        },
-        true,
-      );
-
-      alert("Successfully joined the class!");
-      setShowClassDialog(false);
-      setJoinCode("");
-      window.location.reload();
-    } catch (error: any) {
-      alert(error.message || "Failed to join class. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCreateClass = async () => {
-    if (!className.trim()) {
-      alert("Please enter a class name");
-      return;
-    }
-
-    if (!user) {
-      alert("You must be logged in to create a class");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await postBackend<{ join_code: string; name: string }>(
-        "/api/classrooms/",
-        {
-          name: className.trim(),
-          instructor_id: user.uid,
-        },
-        true,
-      );
-
-      alert(
-        `Class "${result.name}" created successfully!\nClass Code: ${result.join_code}`,
-      );
-      setShowClassDialog(false);
-      setClassName("");
-      window.location.reload();
-    } catch (error: any) {
-      alert(error.message || "Failed to create class. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleOpenMeet = (link?: string | null) => {
+    if (link) window.open(link, "_blank");
   };
 
   return (
@@ -352,14 +438,16 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <ProgressRing progress={72} size={80} strokeWidth={6}>
-              <div className="text-center">
-                <span className="text-lg sm:text-xl font-bold">72%</span>
-                <span className="text-[10px] sm:text-[11px] text-muted-foreground block">
-                  Overall
-                </span>
-              </div>
-            </ProgressRing>
+            {cgpa > 0 && (
+              <ProgressRing progress={Math.round((cgpa / 4) * 100)} size={80} strokeWidth={6}>
+                <div className="text-center">
+                  <span className="text-lg sm:text-xl font-bold">{cgpa.toFixed(1)}</span>
+                  <span className="text-[10px] sm:text-[11px] text-muted-foreground block">
+                    CGPA
+                  </span>
+                </div>
+              </ProgressRing>
+            )}
             <div className="space-y-1">
               <p className="text-[10px] sm:text-xs uppercase text-muted-foreground tracking-wide">
                 Live Attendance
@@ -404,7 +492,6 @@ export default function Dashboard() {
             subtitle="Happening now"
             icon={Video}
             delay={0.4}
-            trend={{ value: stats.liveMeets, isPositive: true }}
           />
         </div>
 
@@ -439,7 +526,7 @@ export default function Dashboard() {
               </div>
               <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-secondary/10 border border-secondary/20 text-center min-w-[90px] sm:min-w-[110px]">
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Terms
+                  Semesters
                 </p>
                 <p className="text-base sm:text-lg font-semibold text-secondary">
                   {resultsLoading ? "…" : termResults.length}
@@ -488,6 +575,17 @@ export default function Dashboard() {
                     style={{ width: `${Math.min(100, (term.gpa / 5) * 100)}%` }}
                   />
                 </div>
+
+                {term.remark && (
+                  <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
+                      Semester Remark
+                    </p>
+                    <p className="text-sm font-bold text-emerald-700">
+                      {term.remark}
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   {term.entries.map((res) => (
@@ -558,7 +656,7 @@ export default function Dashboard() {
                 className="flex items-center gap-2 text-xs sm:text-sm text-secondary hover:text-secondary/80 transition-colors cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
-                Join or create class
+                Join a class
               </button>
             </div>
 
@@ -578,7 +676,19 @@ export default function Dashboard() {
                   transition={{ delay: i * 0.05 }}
                   className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 backdrop-blur-lg shadow-lg"
                 >
-                  <div className="h-20 sm:h-24 w-full bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 opacity-90" />
+                  {session.imageUrl ? (
+                    <img
+                      src={
+                        session.imageUrl.startsWith("http")
+                          ? session.imageUrl
+                          : `${MESSAGING_API_BASE_URL}${session.imageUrl}`
+                      }
+                      alt={session.title}
+                      className="h-32 sm:h-36 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-20 sm:h-24 w-full bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 opacity-90" />
+                  )}
                   <div className="p-4 sm:p-5 space-y-3 -mt-8 sm:-mt-10 relative">
                     <div className="flex items-center justify-between">
                       <div>
@@ -939,98 +1049,58 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Join or Create Class Dialog */}
+      {/* Join Class Dialog */}
       <Dialog open={showClassDialog} onOpenChange={setShowClassDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Join or Create a Class</DialogTitle>
+            <DialogTitle>Join a Class</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Toggle between Join and Create */}
-            <div className="flex gap-2 bg-muted p-1 rounded-lg">
-              <button
-                onClick={() => {
-                  setClassAction("join");
-                  setJoinCode("");
-                  setClassName("");
-                }}
-                className={`flex-1 py-2 rounded-md font-medium transition-colors ${
-                  classAction === "join"
-                    ? "bg-white text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Join Class
-              </button>
-              <button
-                onClick={() => {
-                  setClassAction("create");
-                  setJoinCode("");
-                  setClassName("");
-                }}
-                className={`flex-1 py-2 rounded-md font-medium transition-colors ${
-                  classAction === "create"
-                    ? "bg-white text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Create Class
-              </button>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              {formattedLiveSessions.length === 0 && !liveSessionsLoading && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No Google Meet classes are available right now. When your
+                  lecturers schedule a class, it will appear here with a join
+                  link.
+                </p>
+              )}
+              {liveSessionsLoading && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Loading classes…
+                </p>
+              )}
+              {formattedLiveSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="rounded-xl border border-border/60 bg-muted/30 p-3 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">
+                      {session.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {session.courseName || "Online Class"} ·{" "}
+                      {session.displayTime}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {session.isLive && (
+                      <span className="text-[10px] font-semibold text-destructive flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 bg-destructive rounded-full animate-pulse" />{" "}
+                        Live
+                      </span>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenMeet(session.meetLink)}
+                      disabled={!session.meetLink}
+                    >
+                      <Video className="h-4 w-4" /> Join
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* Join Class Form */}
-            {classAction === "join" && (
-              <div className="grid gap-3">
-                <div>
-                  <label className="text-sm font-medium text-foreground">
-                    Class Code
-                  </label>
-                  <Input
-                    placeholder="Enter the class code (e.g., abc-1234-xyz)"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value)}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Ask your instructor for the class code to join
-                  </p>
-                </div>
-                <Button
-                  onClick={handleJoinClass}
-                  className="w-full mt-4"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Joining..." : "Join Class"}
-                </Button>
-              </div>
-            )}
-
-            {/* Create Class Form */}
-            {classAction === "create" && (
-              <div className="grid gap-3">
-                <div>
-                  <label className="text-sm font-medium text-foreground">
-                    Class Name
-                  </label>
-                  <Input
-                    placeholder="Enter class name (e.g., Advanced Data Structures)"
-                    value={className}
-                    onChange={(e) => setClassName(e.target.value)}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Give your class a clear, descriptive name
-                  </p>
-                </div>
-                <Button
-                  onClick={handleCreateClass}
-                  className="w-full mt-4"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Creating..." : "Create Class"}
-                </Button>
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>

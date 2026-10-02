@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     studentRecordId: string | null,
   ): Promise<{ otp: string; error: Error | null }> => {
     try {
-      const response = await fetch(`${SPRING_API_URL}/api/v1/auth/otp/send`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     otp: string,
   ): Promise<{ valid: boolean; error: Error | null }> => {
     try {
-      const response = await fetch(`${SPRING_API_URL}/api/v1/auth/otp/verify`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/otp/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
@@ -275,6 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       studyMode?: string | null;
       academicYear?: string | null;
       startDate?: string | null;
+      faculty?: string | null;
     };
   }
 
@@ -310,7 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatar_url: null,
         student_number: response.profile.prn ?? null,
         registration_number: response.profile.prn ?? null,
-        department: response.profile.assignedProgramme ?? null,
+        department: response.profile.faculty || response.profile.assignedProgramme || null,
         college: null,
         programme: response.profile.programChoice1 ?? null,
         phone: response.profile.phoneNumber ?? null,

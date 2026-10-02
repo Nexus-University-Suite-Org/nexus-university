@@ -19,7 +19,7 @@ import { LecturerBottomNav } from "@/components/layout/LecturerBottomNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, getMessagingBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 import { DocumentUpload } from "@/components/DocumentUpload";
 import { QuestionReview } from "@/components/QuestionReview";
@@ -53,6 +53,9 @@ interface EditingFormData {
   shuffleQuestions: boolean;
   showAnswers: boolean;
   autoDeactivate: boolean;
+  semester: string;
+  academicYear: string;
+  yearOfStudy: number;
 }
 
 type QuizCreationStep = "upload" | "review" | "settings" | "confirm";
@@ -98,6 +101,9 @@ export default function CreateQuiz() {
     shuffleQuestions: false,
     showAnswers: false,
     autoDeactivate: true,
+    semester: "1",
+    academicYear: "2025/2026",
+    yearOfStudy: 1,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -178,7 +184,7 @@ export default function CreateQuiz() {
     try {
       if (!user?.uid) return;
 
-      const courseUnitsData = await getBackend<any[]>("/api/course-units/");
+      const courseUnitsData = await getMessagingBackend<any[]>("/api/course-units/");
       const coursesData: CourseOption[] = (courseUnitsData || []).map((course: any) => ({
         id: course.id,
         code: course.code || course.course_unit_code || "Unknown",
@@ -469,6 +475,9 @@ export default function CreateQuiz() {
         shuffle_questions: formData.shuffleQuestions,
         show_answers: formData.showAnswers,
         auto_deactivate: formData.autoDeactivate,
+        semester: formData.semester,
+        academic_year: formData.academicYear,
+        year_of_study: formData.yearOfStudy,
         lecturer_id: user.uid,
         questions: extractedQuestions.map((question) => {
           let correctAnswerValue: string | number = question.correct_answer;
@@ -492,7 +501,7 @@ export default function CreateQuiz() {
         }),
       };
 
-      await postBackend("/api/quizzes/", quizPayload);
+      await postMessagingBackend("/api/quizzes/", quizPayload);
 
       toast({
         title: "Success",
@@ -984,6 +993,60 @@ export default function CreateQuiz() {
                           <option value="draft">Draft</option>
                           <option value="active">Active</option>
                           <option value="closed">Closed</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Semester
+                        </label>
+                        <select
+                          value={formData.semester}
+                          onChange={(e) =>
+                            handleInputChange("semester", e.target.value)
+                          }
+                          className="w-full px-4 py-2 rounded-lg border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value="1">Semester 1</option>
+                          <option value="2">Semester 2</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Academic Year
+                        </label>
+                        <select
+                          value={formData.academicYear}
+                          onChange={(e) =>
+                            handleInputChange("academicYear", e.target.value)
+                          }
+                          className="w-full px-4 py-2 rounded-lg border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value="2025/2026">2025/2026</option>
+                          <option value="2024/2025">2024/2025</option>
+                          <option value="2026/2027">2026/2027</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Year of Study
+                        </label>
+                        <select
+                          value={formData.yearOfStudy}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "yearOfStudy",
+                              parseInt(e.target.value),
+                            )
+                          }
+                          className="w-full px-4 py-2 rounded-lg border border-border bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value={1}>Year 1</option>
+                          <option value={2}>Year 2</option>
+                          <option value={3}>Year 3</option>
+                          <option value={4}>Year 4</option>
                         </select>
                       </div>
                     </div>

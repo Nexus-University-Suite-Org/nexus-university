@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend } from "@/lib/backendApi";
+import { getBackend, getMessagingBackend, postBackend } from "@/lib/backendApi";
 import { useToast } from "@/components/ui/use-toast";
 import { autoCloseExpiredQuizzes } from "@/lib/quizUtils";
 
@@ -89,7 +89,7 @@ export default function QuizView() {
 
   const loadQuiz = async () => {
     try {
-      const data = await getBackend<any>(`/api/quizzes/${id}/`);
+      const data = await getMessagingBackend<any>(`/api/quizzes/${id}/`);
       if (!data) throw new Error("Quiz not found");
       const quizData: Quiz = {
         id: data.id,
@@ -141,7 +141,7 @@ export default function QuizView() {
 
   const loadQuestions = async () => {
     try {
-      const data = await getBackend<any[]>(`/api/questions/?quiz_id=${id}`);
+      const data = await getMessagingBackend<any[]>(`/api/questions/?quiz_id=${id}`);
       if (data && data.length > 0) {
         const questionsData: Question[] = data.map((q: any) => ({
           id: q.id,

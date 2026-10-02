@@ -8,10 +8,18 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 5173,
+    port: 5177,
     proxy: {
+      "/api/academic-calendar": {
+        target: "http://localhost:8082",
+        changeOrigin: true,
+      },
+      "/api/timetable": {
+        target: "http://localhost:8082",
+        changeOrigin: true,
+      },
       "/api": {
-        target: "http://localhost:8080",
+        target: "http://localhost:8081",
         changeOrigin: true,
       },
     },
