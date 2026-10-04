@@ -1,7 +1,6 @@
 package org.nexus.nubackend.controller;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +19,8 @@ public class AuthController {
         "2100712345", "student123",
         "21/U/12345/PS", "student123",
         "lecturer@university.edu", "lecturer123",
-        "registrar@university.edu", "registrar123"
+        "registrar@university.edu", "registrar123",
+        "alvin69david@gmail.com", "Buzaaa."
     );
 
     @PostMapping({"/login", "/student/login"})
