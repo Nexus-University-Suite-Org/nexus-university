@@ -27,7 +27,6 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  console.log("[AuthPage] State initialized:", { identifier, password, loading });
 
   const { signInWithStudentId } = useAuth();
   const { settings } = useSiteSettings();
@@ -291,7 +290,6 @@ export default function Auth() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => {
-                    console.log("[AuthPage] password changed");
                     setPassword(e.target.value);
                   }}
                   className="h-14 pl-12 pr-12 text-base rounded-2xl border-[#cfe7d1] bg-[#f7fbf7] text-[#1f2a37] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all duration-200 focus-visible:ring-[#9dd1a8] focus-visible:ring-offset-0 focus-visible:border-[#9dd1a8]"

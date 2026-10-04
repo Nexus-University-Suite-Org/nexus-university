@@ -1,120 +1,36 @@
 package org.nexus.nubackend.controller;
 
+import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
+/**
+ * Student authentication is no longer served by this service.
+ *
+ * <p>Applicant credentials and the admission decision both live in the Nexus
+ * Application Portal (NAP) database, so login is verified there against
+ * {@code applications.password_hash} and is only granted once the application
+ * status is ADMITTED. This service previously answered with a hardcoded
+ * in-memory credential map, which accepted a fixed set of demo logins and
+ * returned the same fabricated identity for all of them.
+ */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private static final Map<String, String> DEMO_CREDENTIALS = Map.of(
-        "student@university.edu", "student123",
-        "2100712345", "student123",
-        "21/U/12345/PS", "student123",
-        "lecturer@university.edu", "lecturer123",
-        "registrar@university.edu", "registrar123",
-        "alvin69david@gmail.com", "Buzaaa."
-    );
+    private static final String ADMISSIONS_BASE_URL = "https://backend-production-b8c2b.up.railway.app";
 
     @PostMapping({"/login", "/student/login"})
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> body) {
-        String email = normalize(body.get("email"));
-        String identifier = normalize(body.get("identifier"));
-        String password = body.getOrDefault("password", "").trim();
-
-        String lookupKey = email != null ? email : identifier;
-        if (lookupKey == null || lookupKey.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Email or student number is required"
-            ));
-        }
-
-        if (password.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Password is required"
-            ));
-        }
-
-        String storedPassword = DEMO_CREDENTIALS.get(lookupKey.toLowerCase());
-        if (storedPassword == null) {
-            String fallback = DEMO_CREDENTIALS.get(lookupKey);
-            if (fallback == null) {
-                return ResponseEntity.status(401).body(Map.of(
-                    "error", "Invalid credentials"
-                ));
-            }
-            storedPassword = fallback;
-        }
-
-        if (!storedPassword.equals(password)) {
-            return ResponseEntity.status(401).body(Map.of(
-                "error", "Invalid credentials"
-            ));
-        }
-
-        String emailValue = lookupKey.contains("@") ? lookupKey.toLowerCase() : "student@university.edu";
-        String userId = "STU-1001";
-        String fullName = "Student Demo";
-
-        Map<String, Object> user = new HashMap<>();
-        user.put("id", userId);
-        user.put("email", emailValue);
-        user.put("fullName", fullName);
-        user.put("role", "student");
-
-        Map<String, Object> profile = new HashMap<>();
-        profile.put("applicationId", userId);
-        profile.put("prn", "STU-1001");
-        profile.put("fullName", fullName);
-        profile.put("email", emailValue);
-        profile.put("phoneNumber", "+254700000000");
-        profile.put("programChoice1", "Bachelor of Computer Science");
-        profile.put("programChoice2", "Bachelor of Business Information Systems");
-        profile.put("programChoice3", "Bachelor of Software Engineering");
-        profile.put("programChoice4", "Bachelor of Data Science");
-        profile.put("assignedProgramme", "Bachelor of Computer Science");
-        profile.put("status", "active");
-        profile.put("studyMode", "Full-time");
-        profile.put("academicYear", "2026");
-        profile.put("startDate", "2026-09-01");
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", UUID.randomUUID().toString());
-        response.put("user", user);
-        response.put("profile", profile);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/student/reset-password")
-    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody Map<String, String> body) {
-        String identifier = normalize(body.get("email"));
-        String altIdentifier = normalize(body.get("identifier"));
-        String newPassword = body.getOrDefault("newPassword", "").trim();
-
-        if ((identifier == null && altIdentifier == null) || newPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Email or student number and new password are required"
-            ));
-        }
-
-        return ResponseEntity.ok(Map.of(
-            "ok", true,
-            "message", "Password reset successfully"
+    public ResponseEntity<Map<String, Object>> retired() {
+        return ResponseEntity.status(HttpStatus.GONE).body(Map.of(
+                "error", "Student login is not handled by this service",
+                "message", "POST /api/v1/auth/student/login on " + ADMISSIONS_BASE_URL
+                        + " and sign in with the email and password used in the application portal. "
+                        + "Access is granted once the application status is ADMITTED.",
+                "loginUrl", ADMISSIONS_BASE_URL + "/api/v1/auth/student/login"
         ));
-    }
-
-    private String normalize(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

@@ -8,6 +8,9 @@ import {
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const ADMISSIONS_API_BASE_URL =
+  import.meta.env.VITE_ADMISSIONS_API_BASE_URL ||
+  "https://backend-production-b8c2b.up.railway.app";
 const SPRING_API_URL =
   import.meta.env.VITE_SPRING_API_URL || "http://localhost:8082";
 const AUTH_TOKEN_STORAGE_KEY = "nexus-auth-token";
@@ -131,7 +134,7 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${ADMISSIONS_API_BASE_URL}${path}`, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
@@ -157,7 +160,7 @@ async function getJson<T>(path: string): Promise<T> {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${ADMISSIONS_API_BASE_URL}${path}`, {
     method: "GET",
     headers,
   });
@@ -209,11 +212,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     studentRecordId: string | null,
   ): Promise<{ otp: string; error: Error | null }> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/otp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const response = await fetch(
+        `${ADMISSIONS_API_BASE_URL}/api/v1/auth/otp/send`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        },
+      );
 
       const data = await response.json();
       if (!data.ok) {
@@ -232,11 +238,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     otp: string,
   ): Promise<{ valid: boolean; error: Error | null }> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/otp/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
-      });
+      const response = await fetch(
+        `${ADMISSIONS_API_BASE_URL}/api/v1/auth/otp/verify`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp }),
+        },
+      );
 
       const data = await response.json();
       if (!data.ok || !data.verified) {
@@ -263,6 +272,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile: {
       applicationId?: number | string;
       prn?: string | null;
+      studentNumber?: string | null;
+      registrationNumber?: string | null;
       fullName?: string;
       email?: string;
       phoneNumber?: string | null;
@@ -295,8 +306,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { email, password },
       );
 
+      const canonicalId =
+        response.profile.studentNumber ??
+        response.profile.registrationNumber ??
+        response.profile.prn ??
+        response.user.id ??
+        response.profile.applicationId ??
+        "";
+
       const user: User = {
-        uid: String(response.user.id ?? response.profile.applicationId ?? ""),
+        uid: String(canonicalId),
         email: response.user.email ?? response.profile.email ?? email,
         displayName:
           response.user.fullName ??
@@ -309,8 +328,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: response.profile.fullName ?? user.displayName ?? "",
         email: user.email,
         avatar_url: null,
-        student_number: response.profile.prn ?? null,
-        registration_number: response.profile.prn ?? null,
+        student_number: response.profile.studentNumber ?? null,
+        registration_number:
+          response.profile.registrationNumber ??
+          response.profile.studentNumber ??
+          null,
         department: response.profile.faculty || response.profile.assignedProgramme || null,
         college: null,
         programme: response.profile.programChoice1 ?? null,
