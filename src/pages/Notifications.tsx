@@ -28,7 +28,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMessagingBackend, postMessagingBackend } from "@/lib/backendApi";
+import {
+  getMessagingBackend,
+  postMessagingBackend,
+  MESSAGING_API_BASE_URL,
+} from "@/lib/backendApi";
 import { formatDistanceToNow } from "date-fns";
 
 interface Notification {
@@ -63,6 +67,129 @@ const notificationColors = {
   announcement: "text-cyan-500 bg-cyan-500/10 border-cyan-500/20",
 };
 
+/* ------------------------------------------------------------------ */
+/* Debug instrumentation                                              */
+/* Filter the console on "[Notifications]" for page-level logs and     */
+/* "[API]" for the HTTP layer (src/lib/backendApi.ts).                 */
+/* ------------------------------------------------------------------ */
+
+const LOG_TAG = "[Notifications]";
+const AUTH_TOKEN_KEY = "nexus-auth-token";
+const mountId = `mount-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+type LogDetail = Record<string, unknown>;
+
+function log(stage: string, detail?: LogDetail) {
+  console.log(`${LOG_TAG} ${stage}`, detail ?? "");
+}
+
+function warn(stage: string, detail?: LogDetail) {
+  console.warn(`${LOG_TAG} ${stage}`, detail ?? "");
+}
+
+function error(stage: string, detail?: LogDetail) {
+  console.error(`${LOG_TAG} ${stage}`, detail ?? "");
+}
+
+function describeError(err: unknown) {
+  const base: LogDetail = {
+    raw: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    stack:
+      err instanceof Error
+        ? err.stack?.split("\n").slice(0, 4).join("\n")
+        : undefined,
+  };
+
+  if (err instanceof TypeError) {
+    return {
+      ...base,
+      kind: "network",
+      hint: "fetch() rejected before any HTTP response arrived. Backend not running, wrong base URL, or the browser blocked it via CORS. There is no status code for this failure mode - check the [API] request log for the URL that was attempted.",
+    };
+  }
+
+  if (err instanceof SyntaxError) {
+    return {
+      ...base,
+      kind: "json-parse",
+      hint: "The response body could not be parsed as JSON, so this is usually an HTML error page or an empty body rather than an API payload.",
+    };
+  }
+
+  return {
+    ...base,
+    kind: "http",
+    hint: "handleResponse() threw because response.ok was false. The status code and body were discarded at the throw site - see the [API] response log.",
+  };
+}
+
+function inspectNotification(row: unknown, index: number) {
+  const problems: string[] = [];
+
+  if (row == null || typeof row !== "object") {
+    return { index, receivedType: typeof row, problems: ["not an object"] };
+  }
+
+  const n = row as Record<string, unknown>;
+
+  if (n.id === undefined || n.id === null) {
+    problems.push("missing id");
+  } else if (typeof n.id !== "string") {
+    problems.push(
+      `id is ${typeof n.id} but the Notification interface declares string`,
+    );
+  }
+
+  for (const field of ["title", "message", "type", "is_read", "created_at"]) {
+    if (n[field] === undefined || n[field] === null) {
+      problems.push(`missing ${field}`);
+    }
+  }
+
+  if (
+    n.created_at != null &&
+    Number.isNaN(new Date(n.created_at as string).getTime())
+  ) {
+    problems.push(
+      `created_at ${JSON.stringify(n.created_at)} is not a parseable date`,
+    );
+  }
+
+  if (n.link !== undefined && n.link !== null && typeof n.link !== "string") {
+    problems.push(`link is ${typeof n.link}`);
+  }
+
+  return {
+    index,
+    id: n.id,
+    idType: typeof n.id,
+    type: n.type,
+    is_read: n.is_read,
+    hasLink: Boolean(n.link),
+    created_at: n.created_at,
+    problems,
+  };
+}
+
+function formatRelativeTime(value: string) {
+  try {
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      warn("relative-time.invalid-date", { created_at: value });
+      return value;
+    }
+
+    return formatDistanceToNow(parsed, { addSuffix: true });
+  } catch (err) {
+    warn("relative-time.format-threw", {
+      created_at: value,
+      ...describeError(err),
+    });
+    return value;
+  }
+}
+
 export default function Notifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -72,9 +199,124 @@ export default function Notifications() {
   const titleRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLDivElement>(null);
 
+  // Derived before the effects below: dependency arrays are evaluated during
+  // render, so anything referenced there must already be initialised.
+  const filteredNotifications = notifications.filter((n) => {
+    if (filter === "unread") return !n.is_read;
+    if (filter === "read") return n.is_read;
+    return true;
+  });
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const readCount = notifications.filter((n) => n.is_read).length;
+
   useEffect(() => {
+    let authTokenPresent = false;
+    try {
+      authTokenPresent = Boolean(window.localStorage.getItem(AUTH_TOKEN_KEY));
+    } catch {
+      authTokenPresent = false;
+    }
+
+    log("mount", {
+      mountId,
+      messagingBaseUrl: MESSAGING_API_BASE_URL,
+      pageOrigin: window.location.origin,
+      authTokenPresent,
+      isSecureContext: window.isSecureContext,
+      userPresent: Boolean(user),
+      userUid: user?.uid ?? null,
+      note: "Compare pageOrigin against the messaging backend CORS allow-list. A mismatch makes every fetch below fail as a network error with no HTTP status.",
+      viteEnv: {
+        VITE_WEBMAIL_API_BASE_URL: import.meta.env.VITE_WEBMAIL_API_BASE_URL,
+        VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+        VITE_NU_API_BASE_URL: import.meta.env.VITE_NU_API_BASE_URL,
+      },
+    });
+
+    const onWindowError = (event: ErrorEvent) => {
+      error("window.error", {
+        message: event.message,
+        source: `${event.filename}:${event.lineno}:${event.colno}`,
+      });
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      error("window.unhandledrejection", {
+        reason: String(event.reason),
+      });
+    };
+
+    window.addEventListener("error", onWindowError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    return () => {
+      log("unmount", { mountId });
+      window.removeEventListener("error", onWindowError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const uid = user?.uid;
+
+    log("auth.user-changed", {
+      mountId,
+      hasUser: Boolean(user),
+      uid: uid ?? null,
+      uidType: typeof uid,
+      uidTruthy: Boolean(uid),
+      email: user?.email ?? null,
+    });
+
+    if (!uid) {
+      warn("auth.no-uid-bailout", {
+        mountId,
+        bug: "fetchNotifications() returns early when user.uid is falsy. That early return happens BEFORE the try block, so the finally that calls setLoading(false) never runs. loading stays true and the page renders 'Loading notifications...' forever.",
+        expectedWhen: "auth is still resolving on first paint",
+        persistsWhen: "the signed-in user object has no uid, so this is a stuck spinner rather than a loading state",
+      });
+    }
+
     fetchNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    if (loading) {
+      warn("render.loading-spinner", {
+        mountId,
+        note: "If this is the only loading log and no fetch.request log follows, the auth.no-uid-bailout path was taken.",
+      });
+    } else {
+      log("render.content", {
+        mountId,
+        filter,
+        total: notifications.length,
+        visible: filteredNotifications.length,
+      });
+    }
+  }, [loading, notifications, filter, filteredNotifications.length]);
+
+  useEffect(() => {
+    log("derived.state", {
+      mountId,
+      filter,
+      total: notifications.length,
+      unread: unreadCount,
+      read: readCount,
+      visible: filteredNotifications.length,
+      emptyStateReason:
+        filteredNotifications.length > 0
+          ? null
+          : filter === "unread"
+            ? `no unread rows (total ${notifications.length}, read ${readCount})`
+            : filter === "read"
+              ? `no read rows (total ${notifications.length}, unread ${unreadCount})`
+              : "the messaging backend returned an empty list",
+    });
+  }, [notifications, filter, filteredNotifications.length, unreadCount, readCount]);
 
   useEffect(() => {
     // GSAP Text Animation for Title
@@ -124,58 +366,163 @@ export default function Notifications() {
   }, []);
 
   const fetchNotifications = async () => {
-    if (!user?.uid) return;
+    const startedAt = performance.now();
+    const uid = user?.uid;
+
+    if (!uid) {
+      warn("fetch.bailed-no-uid", { mountId, loadingWillRemainTrue: true });
+      return;
+    }
+
+    const path = `/api/notifications/?user_id=${uid}`;
+
+    log("fetch.request", {
+      mountId,
+      method: "GET",
+      path,
+      resolvedUrl: `${MESSAGING_API_BASE_URL}${path}`,
+      userUid: uid,
+      note: "getMessagingBackend sends no Authorization header, so a 401/403 here would mean user_id scoping rather than a missing token.",
+    });
 
     try {
       setLoading(true);
-      const data: any[] = await getMessagingBackend(
-        `/api/notifications/?user_id=${user.uid}`,
-      );
-      setNotifications(data || []);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
+
+      const data: unknown = await getMessagingBackend<unknown>(path);
+      const elapsedMs = Math.round(performance.now() - startedAt);
+
+      const isArray = Array.isArray(data);
+      const rows: Notification[] = isArray ? data : [];
+      const inspections = rows.map(inspectNotification);
+      const malformed = inspections.filter((r) => r.problems.length > 0);
+
+      log("fetch.response", {
+        mountId,
+        elapsedMs,
+        isArray,
+        receivedType: Object.prototype.toString.call(data),
+        rowCount: rows.length,
+        malformedCount: malformed.length,
+        malformed,
+      });
+
+      if (!isArray) {
+        error("fetch.not-an-array", {
+          mountId,
+          received: data,
+          hint: 'setNotifications(data || []) would store a non-array, and .filter() on the next render throws "notifications.filter is not a function". A paginated envelope such as { results: [...] } is the usual cause.',
+        });
+      }
+
+      setNotifications(rows);
+      log("fetch.state-updated", { mountId, notificationCount: rows.length });
+    } catch (err) {
+      error("fetch.failed", {
+        mountId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+        ...describeError(err),
+      });
+      warn("fetch.list-left-unchanged", {
+        mountId,
+        note: "On failure the previous state is kept, so a failed refetch leaves the old list on screen with no error UI.",
+      });
     } finally {
       setLoading(false);
+      log("fetch.loading-false", {
+        mountId,
+        elapsedMs: Math.round(performance.now() - startedAt),
+      });
     }
   };
 
   const markAsRead = async (id: string) => {
+    const path = `/api/notifications/${id}/read/`;
+    const target = notifications.find((n) => String(n.id) === String(id));
+
+    log("markAsRead.request", {
+      mountId,
+      id,
+      idType: typeof id,
+      wasRead: target?.is_read,
+      resolvedUrl: `${MESSAGING_API_BASE_URL}${path}`,
+    });
+
+    if (target && target.is_read) {
+      warn("markAsRead.already-read", { mountId, id });
+    }
+
+    if (!target) {
+      warn("markAsRead.id-not-in-list", {
+        mountId,
+        id,
+        knownIds: notifications.map((n) => n.id),
+      });
+    }
+
     try {
-      await postMessagingBackend(`/api/notifications/${id}/read/`, {});
+      const response = await postMessagingBackend<unknown>(path, {});
+
+      log("markAsRead.response", { mountId, id, response });
 
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
       );
 
       window.dispatchEvent(new Event("notifications-updated"));
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
+      log("markAsRead.state-updated", {
+        mountId,
+        id,
+        eventDispatched: "notifications-updated",
+        note: "StudentHeader listens for that event and refetches; expect an extra [API] request in the log.",
+      });
+    } catch (err) {
+      error("markAsRead.failed", {
+        mountId,
+        id,
+        resolvedUrl: `${MESSAGING_API_BASE_URL}${path}`,
+        ...describeError(err),
+      });
     }
   };
 
   const markAllAsRead = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      warn("markAllAsRead.bailed-no-uid", { mountId });
+      return;
+    }
+
+    const path = "/api/notifications/mark-all-read/";
+
+    log("markAllAsRead.request", {
+      mountId,
+      method: "POST",
+      path,
+      resolvedUrl: `${MESSAGING_API_BASE_URL}${path}`,
+      body: { user_id: user.uid },
+    });
 
     try {
-      await postMessagingBackend("/api/notifications/mark-all-read/", {
+      const response = await postMessagingBackend<unknown>(path, {
         user_id: user.uid,
       });
+
+      log("markAllAsRead.response", { mountId, response });
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
 
       window.dispatchEvent(new Event("notifications-updated"));
-    } catch (error) {
-      console.error("Error marking all as read:", error);
+      log("markAllAsRead.state-updated", {
+        mountId,
+        eventDispatched: "notifications-updated",
+      });
+    } catch (err) {
+      error("markAllAsRead.failed", {
+        mountId,
+        resolvedUrl: `${MESSAGING_API_BASE_URL}${path}`,
+        ...describeError(err),
+      });
     }
   };
-
-  const filteredNotifications = notifications.filter((n) => {
-    if (filter === "unread") return !n.is_read;
-    if (filter === "read") return n.is_read;
-    return true;
-  });
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const getNotificationIcon = (type: string) => {
     const IconComponent =
@@ -296,7 +643,20 @@ export default function Notifications() {
           {/* Filter Tabs */}
           <Tabs
             value={filter}
-            onValueChange={(v) => setFilter(v as FilterType)}
+            onValueChange={(v) => {
+              const next = v as FilterType;
+
+              log("filter.changed", {
+                mountId,
+                previous: filter,
+                next,
+                total: notifications.length,
+                unread: notifications.filter((n) => !n.is_read).length,
+                read: notifications.filter((n) => n.is_read).length,
+              });
+
+              setFilter(next);
+            }}
             className="mb-6"
           >
             <TabsList className="grid w-full max-w-md grid-cols-3 bg-muted/50">
@@ -379,10 +739,25 @@ export default function Notifications() {
                                 : "bg-background shadow-md"
                             } ${colorClass.split(" ")[2]}`}
                             onClick={() => {
+                              log("card.click", {
+                                mountId,
+                                id: notification.id,
+                                type: notification.type,
+                                is_read: notification.is_read,
+                                link: notification.link,
+                                willMarkAsRead: !notification.is_read,
+                                willNavigate: Boolean(notification.link),
+                              });
+
                               if (!notification.is_read) {
                                 markAsRead(notification.id);
                               }
                               if (notification.link) {
+                                warn("card.navigate", {
+                                  mountId,
+                                  link: notification.link,
+                                  hint: "The link is passed to navigate() verbatim, so it must be an in-app react-router path. An absolute URL or an unrouted path dead-ends the navigation.",
+                                });
                                 navigate(notification.link);
                               }
                             }}
@@ -420,9 +795,8 @@ export default function Notifications() {
                                       <div className="flex items-center gap-1">
                                         <Clock className="h-3 w-3" />
                                         <span>
-                                          {formatDistanceToNow(
-                                            new Date(notification.created_at),
-                                            { addSuffix: true },
+                                          {formatRelativeTime(
+                                            notification.created_at,
                                           )}
                                         </span>
                                       </div>
@@ -445,6 +819,11 @@ export default function Notifications() {
                                         } transition-opacity`}
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          log("view-button.click", {
+                                            mountId,
+                                            id: notification.id,
+                                            link: notification.link,
+                                          });
                                           // Mark as read before navigating
                                           if (!notification.is_read) {
                                             markAsRead(notification.id);
@@ -466,6 +845,10 @@ export default function Notifications() {
                                     className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      log("read-toggle.click", {
+                                        mountId,
+                                        id: notification.id,
+                                      });
                                       markAsRead(notification.id);
                                     }}
                                   >

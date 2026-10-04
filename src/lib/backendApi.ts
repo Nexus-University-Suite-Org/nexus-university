@@ -29,14 +29,71 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Token ${token}` } : {};
 }
 
-async function handleResponse(response: Response) {
+const API_LOG_TAG = "[API]";
+
+type ApiCallContext = { method: string; url: string; startedAt: number };
+
+async function handleResponse(response: Response, call?: ApiCallContext) {
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    const message = data?.detail || data?.error || "Backend request failed";
-    throw new Error(message);
+  const elapsedMs = call
+    ? Math.round(performance.now() - call.startedAt)
+    : undefined;
+  const bodyPreview =
+    text.length > 500 ? `${text.slice(0, 500)}... (${text.length} chars)` : text;
+
+  console.log(`${API_LOG_TAG} response`, {
+    method: call?.method ?? "unknown",
+    url: call?.url ?? "unknown",
+    status: response.status,
+    ok: response.ok,
+    elapsedMs,
+    contentType: response.headers.get("content-type"),
+    bodyPreview,
+  });
+
+  if (!text) {
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText} (empty response body)`,
+      );
+    }
+    return null;
   }
-  return data;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (parseError) {
+    console.error(`${API_LOG_TAG} json-parse-failed`, {
+      url: call?.url,
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      rawBody: text.slice(0, 500),
+      parseError: (parseError as Error).message,
+    });
+    throw new Error(
+      `HTTP ${response.status}: body was not valid JSON (${
+        (parseError as Error).message
+      }). First 200 chars: ${text.slice(0, 200)}`,
+    );
+  }
+
+  if (!response.ok) {
+    const payload = parsed as {
+      detail?: string;
+      error?: string;
+      message?: string;
+    } | null;
+
+    throw new Error(
+      payload?.detail ||
+        payload?.error ||
+        payload?.message ||
+        `HTTP ${response.status} ${response.statusText}`,
+    );
+  }
+
+  return parsed;
 }
 
 export async function getBackend<T>(path: string, auth: boolean = false): Promise<T> {
@@ -132,23 +189,50 @@ export async function postNuBackend<T>(
 
 // Messaging Backend (port 8084) helpers for notifications, messages, etc.
 export async function getMessagingBackend<T>(path: string): Promise<T> {
-  const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
+  const url = `${MESSAGING_API_BASE_URL}${path}`;
+  const startedAt = performance.now();
+
+  console.log(`${API_LOG_TAG} request`, {
+    method: "GET",
+    url,
+    messagingBaseUrl: MESSAGING_API_BASE_URL,
+  });
+
+  const response = await fetch(url, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
-  return handleResponse(response) as Promise<T>;
+  return handleResponse(response, {
+    method: "GET",
+    url,
+    startedAt,
+  }) as Promise<T>;
 }
 
 export async function postMessagingBackend<T>(
   path: string,
   payload: unknown,
 ): Promise<T> {
-  const response = await fetch(`${MESSAGING_API_BASE_URL}${path}`, {
+  const url = `${MESSAGING_API_BASE_URL}${path}`;
+  const startedAt = performance.now();
+
+  console.log(`${API_LOG_TAG} request`, {
+    method: "POST",
+    url,
+    body: payload,
+    messagingBaseUrl: MESSAGING_API_BASE_URL,
+  });
+
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return handleResponse(response) as Promise<T>;
+  return handleResponse(response, {
+    method: "POST",
+    url,
+    startedAt,
+  }) as Promise<T>;
 }
 
 // Registrar backend (port 8082) helpers for university services, office locations, service requests
