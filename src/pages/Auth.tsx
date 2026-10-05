@@ -22,39 +22,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 export default function Auth() {
-  console.log("[AuthPage] Component rendering");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { signInWithStudentId } = useAuth();
+  const { signIn } = useAuth();
   const { settings } = useSiteSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSignIn = async (e: React.FormEvent) => {
-    console.log("[AuthPage] handleSignIn called with:", { identifier });
     e.preventDefault();
     setLoading(true);
-    console.log("[AuthPage] Loading set to true");
 
     try {
-      console.log("[AuthPage] Calling signInWithStudentId...");
-      const { error, profile } = await signInWithStudentId(
-        identifier,
-        password,
-      );
-      console.log("[AuthPage] signInWithStudentId result:", { error, profile });
+      const { error, profile } = await signIn(identifier, password);
       if (error) throw error;
 
       const userRole = profile?.role || "student";
-      console.log("[AuthPage] Login successful, userRole:", userRole);
       toast({ title: "Welcome back!" });
-      console.log("[AuthPage] Navigating to:", userRole === "lecturer" ? "/lecturer" : "/dashboard");
       navigate(userRole === "lecturer" ? "/lecturer" : "/dashboard");
     } catch (error: any) {
-      console.error("[AuthPage] Error during sign in:", error);
       toast({
         title: "Error",
         description: error.message,
@@ -62,7 +51,6 @@ export default function Auth() {
       });
     } finally {
       setLoading(false);
-      console.log("[AuthPage] Loading set to false");
     }
   };
 
@@ -252,18 +240,17 @@ export default function Auth() {
           <form onSubmit={handleSignIn} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="identifier" className="text-sm font-medium text-[#213a31]">
-                Student / Registration Number or Email
+                Email address
               </Label>
               <div className="relative">
                 <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#4c8e62]" />
                 <Input
                   id="identifier"
-                  placeholder="21/U/12345/PS, 2100712345 or email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
                   value={identifier}
-                  onChange={(e) => {
-                    console.log("[AuthPage] identifier changed:", e.target.value);
-                    setIdentifier(e.target.value);
-                  }}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="h-14 pl-12 text-base rounded-2xl border-[#cfe7d1] bg-[#f7fbf7] text-[#1f2a37] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-all duration-200 focus-visible:ring-[#9dd1a8] focus-visible:ring-offset-0 focus-visible:border-[#9dd1a8]"
                   required
                 />
@@ -312,7 +299,6 @@ export default function Auth() {
 
             <Button
               type="submit"
-              onClick={() => console.log("[AuthPage] Submit button clicked")}
               className="w-full h-14 text-base font-semibold bg-gradient-to-r from-[#bfe8bf] via-[#9ed9a4] to-[#7cc98d] text-[#163229] hover:brightness-[1.02] rounded-2xl shadow-[0_18px_30px_rgba(92,170,112,0.30)] group border border-[#a6d6ad]"
               disabled={loading}
             >

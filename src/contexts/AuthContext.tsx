@@ -50,10 +50,6 @@ interface AuthContextType {
     identifier: string,
     password: string,
   ) => Promise<{ error: Error | null; user?: User; profile?: Profile | null }>;
-  signInWithStudentId: (
-    identifier: string,
-    password: string,
-  ) => Promise<{ error: Error | null; user?: User; profile?: Profile | null }>;
   signOut: () => Promise<void>;
   generateOTP: (
     email: string,
@@ -124,7 +120,21 @@ function clearSession() {
   window.localStorage.removeItem(AUTH_PROFILE_STORAGE_KEY);
 }
 
-async function postJson<T>(path: string, payload: unknown): Promise<T> {
+function messageFromPayload(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  for (const key of ["message", "detail", "error"]) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+async function requestJson<T>(
+  path: string,
+  method: "POST" | "GET",
+  payload?: unknown,
+): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -135,44 +145,43 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
   }
 
   const response = await fetch(`${ADMISSIONS_API_BASE_URL}${path}`, {
-    method: "POST",
+    method,
     headers,
-    body: JSON.stringify(payload),
+    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
   });
 
-  const data = await response.json().catch(() => null);
+  const raw = await response.text();
+  let data: unknown = null;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = null;
+    }
+  }
 
   if (!response.ok) {
-    const message = data?.detail || data?.error || "Request failed";
-    throw new Error(message);
+    // A bare 500 means the admissions backend threw outside its handled
+    // exceptions. Historically that meant "no such applicant" / "wrong
+    // password", so do not present it as a correct-credentials failure.
+    if (response.status >= 500) {
+      throw new Error(
+        `The admissions service is unavailable (HTTP ${response.status}). ` +
+          "Please try again shortly or contact admissions.",
+      );
+    }
+    throw new Error(messageFromPayload(data) ?? `Request failed (HTTP ${response.status})`);
   }
 
   return data as T;
 }
 
+async function postJson<T>(path: string, payload: unknown): Promise<T> {
+  return requestJson<T>(path, "POST", payload);
+}
+
 async function getJson<T>(path: string): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  const token = getToken();
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${ADMISSIONS_API_BASE_URL}${path}`, {
-    method: "GET",
-    headers,
-  });
-
-  const data = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const message = data?.detail || data?.error || "Request failed";
-    throw new Error(message);
-  }
-
-  return data as T;
+  return requestJson<T>(path, "GET");
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -354,17 +363,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithStudentId = async (
-    identifier: string,
-    password: string,
-  ): Promise<{
-    error: Error | null;
-    user?: User;
-    profile?: Profile | null;
-  }> => {
-    return signIn(identifier, password);
-  };
-
   const resetPassword = async (
     identifier: string,
     newPassword: string,
@@ -381,12 +379,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // The admissions backend issues stateless JWTs and exposes no logout route, so
+  // signing out is purely a local concern: drop the token and cached session.
   const signOut = async () => {
-    try {
-      await postJson<{ success: boolean }>("/api/auth/logout/", {});
-    } catch {
-      // ignore logout errors - still clear local token
-    }
     clearToken();
     clearSession();
     setUser(null);
@@ -402,7 +397,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         signIn,
-        signInWithStudentId,
         signOut,
         generateOTP,
         verifyOTP,
