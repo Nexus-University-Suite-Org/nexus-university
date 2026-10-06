@@ -33,12 +33,7 @@ export function LandingHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const destination =
-    profile?.role === "lecturer"
-      ? "/lecturer"
-      : profile?.role === "registrar"
-        ? "/registrar"
-        : "/dashboard";
+  const destination = profile?.role === "registrar" ? "/registrar" : "/dashboard";
 
   const brandMark = (
     <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#c3e2b5] to-[#9ecb8a] text-[#204734] shadow-lg shadow-emerald-200/60 transition-transform group-hover:scale-105">

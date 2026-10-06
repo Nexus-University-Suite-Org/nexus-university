@@ -52,24 +52,6 @@ const studentNavItems = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-const lecturerNavItems = [
-  { label: "Dashboard", href: "/lecturer", icon: BookOpen },
-  { label: "My Courses", href: "/lecturer/courses", icon: BookOpen },
-  { label: "Grades", href: "/lecturer/gradebook", icon: BarChart3 },
-  { label: "Assignments", href: "/lecturer/assignments", icon: FileText },
-  { label: "Quizzes", href: "/lecturer/quiz", icon: HelpCircle },
-  { label: "Enrollments", href: "/lecturer/enrollments", icon: Users },
-  {
-    label: "Announcements",
-    href: "/lecturer/announcements",
-    icon: MessageCircle,
-  },
-  { label: "Roster", href: "/lecturer/roster", icon: Users },
-  { label: "Analytics", href: "/lecturer/analytics", icon: Target },
-  { label: "ID Card", href: "/lecturer/id-card", icon: User },
-  { label: "Settings", href: "/lecturer/settings", icon: Settings },
-];
-
 const registrarNavItems = [
   { label: "Dashboard", href: "/registrar", icon: Calculator },
   { label: "Students", href: "/registrar/students", icon: Users },
@@ -92,8 +74,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const getNavItems = () => {
     switch (profile?.role) {
-      case "lecturer":
-        return lecturerNavItems;
       case "registrar":
         return registrarNavItems;
       default:
@@ -103,8 +83,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const getRoleLabel = () => {
     switch (profile?.role) {
-      case "lecturer":
-        return "Lecturer";
       case "registrar":
         return "Registrar";
       default:
@@ -220,11 +198,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex h-16 items-center border-b border-border px-3">
             <Link
               to={
-                profile?.role === "lecturer"
-                  ? "/lecturer"
-                  : profile?.role === "registrar"
-                    ? "/registrar"
-                    : "/dashboard"
+                profile?.role === "registrar" ? "/registrar" : "/dashboard"
               }
               className="flex items-center gap-2.5 group min-w-0"
             >
@@ -294,11 +268,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <div className="flex h-16 items-center border-b border-border px-4">
                     <Link
                       to={
-                        profile?.role === "lecturer"
-                          ? "/lecturer"
-                          : profile?.role === "registrar"
-                            ? "/registrar"
-                            : "/dashboard"
+                        profile?.role === "registrar"
+                          ? "/registrar"
+                          : "/dashboard"
                       }
                       className="flex items-center gap-2.5 group"
                     >

@@ -42,7 +42,7 @@ export default function Auth() {
 
       const userRole = profile?.role || "student";
       toast({ title: "Welcome back!" });
-      navigate(userRole === "lecturer" ? "/lecturer" : "/dashboard");
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error",

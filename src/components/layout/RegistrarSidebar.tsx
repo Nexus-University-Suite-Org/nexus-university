@@ -9,10 +9,9 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  BarChart3,
-  HelpCircle,
-  UserCheck,
-} from "lucide-react";
+    BarChart3,
+    HelpCircle,
+  } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
@@ -20,7 +19,6 @@ import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Students", href: "/students", icon: Users },
-  { name: "Lecturers", href: "/lecturers", icon: UserCheck },
   { name: "Transcripts", href: "/transcripts", icon: FileText },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },

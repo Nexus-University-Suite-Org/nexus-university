@@ -1,22 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  Home,
-  BookOpen,
-  Video,
-  User,
-  Bell,
-  BarChart3,
-  Mail,
-  Target,
-} from "lucide-react";
+import { Home, BookOpen, Mail, Bell, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
-  { label: "Home", href: "/lecturer", icon: Home },
-  { label: "Grades", href: "/lecturer/gradebook", icon: BookOpen },
-  { label: "Messages", href: "/lecturer/messages", icon: Mail },
-  { label: "Analytics", href: "/lecturer/analytics", icon: BarChart3 },
+  { label: "Home", href: "/dashboard", icon: Home },
+  { label: "Results", href: "/results", icon: BookOpen },
+  { label: "Webmail", href: "/webmail", icon: Mail },
+  { label: "Notices", href: "/announcements", icon: Bell },
   { label: "Profile", href: "/profile", icon: User },
 ];
 

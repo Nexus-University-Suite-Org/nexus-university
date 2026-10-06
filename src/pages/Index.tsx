@@ -148,13 +148,7 @@ export default function Index() {
   if (isSignedIn) {
     return (
       <Navigate
-        to={
-          profile?.role === "lecturer"
-            ? "/lecturer"
-            : profile?.role === "registrar"
-              ? "/registrar"
-              : "/dashboard"
-        }
+        to={profile?.role === "registrar" ? "/registrar" : "/dashboard"}
         replace
       />
     );

@@ -1,11 +1,10 @@
-import { Toaster } from "@/components/ui/toaster";
+﻿import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
-import { LecturerLayout } from "@/components/layout/LecturerLayout";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -19,24 +18,6 @@ import Notifications from "./pages/Notifications";
 import Webmail from "./pages/Webmail";
 import Results from "./pages/Results";
 import Timetable from "./pages/Timetable";
-import LecturerDashboard from "./pages/LecturerDashboard";
-import LecturerCourseSelection from "./pages/LecturerCourseSelection";
-import MarksManagement from "./pages/MarksManagement";
-import LecturerAttendance from "./pages/LecturerAttendance";
-import LecturerClasses from "./pages/LecturerClasses";
-import LecturerMessages from "./pages/LecturerMessages";
-import LecturerGradeBook from "./pages/LecturerGradeBook";
-import LecturerAssignments from "./pages/LecturerAssignments";
-import LecturerAnnouncements from "./pages/LecturerAnnouncements";
-import LecturerRoster from "./pages/LecturerRoster";
-import LecturerAnalytics from "./pages/LecturerAnalytics";
-import LecturerEnrollments from "./pages/LecturerEnrollments";
-import LecturerSettings from "./pages/LecturerSettings";
-import LecturerQuiz from "./pages/LecturerQuiz";
-import CreateQuiz from "./pages/CreateQuiz";
-import EditQuiz from "./pages/EditQuiz";
-import QuizView from "./pages/QuizView";
-import QuizResults from "./pages/QuizResults";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentQuiz from "./pages/StudentQuiz";
 import StudentCourses from "./pages/StudentCourses";
@@ -46,7 +27,6 @@ import Announcements from "./pages/Announcements";
 import NotFound from "./pages/NotFound";
 import IdCard from "./pages/IdCard";
 import AcademicCalendar from "./pages/AcademicCalendar";
-import LecturerIdCard from "./pages/LecturerIdCard";
 import RegistrarDashboard from "./pages/RegistrarDashboard";
 import RegistrarStudents from "./pages/RegistrarStudents";
 import RegistrarStudentDetail from "./pages/RegistrarStudentDetail";
@@ -92,42 +72,9 @@ function StudentRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect lecturers to lecturer dashboard
-  if (profile?.role === "lecturer") {
-    return <Navigate to="/lecturer" replace />;
-  }
-
   // Redirect registrars to registrar dashboard
   if (profile?.role === "registrar") {
     return <Navigate to="/registrar" replace />;
-  }
-
-  return <AppLayout>{children}</AppLayout>;
-}
-
-function LecturerRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="h-8 w-8 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Redirect non-lecturers to appropriate dashboard
-  if (profile?.role !== "lecturer") {
-    return (
-      <Navigate
-        to={profile?.role === "registrar" ? "/registrar" : "/dashboard"}
-        replace
-      />
-    );
   }
 
   return <AppLayout>{children}</AppLayout>;
@@ -150,12 +97,7 @@ function RegistrarRoute({ children }: { children: React.ReactNode }) {
 
   // Redirect non-registrars to appropriate dashboard
   if (profile?.role !== "registrar") {
-    return (
-      <Navigate
-        to={profile?.role === "lecturer" ? "/lecturer" : "/dashboard"}
-        replace
-      />
-    );
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <AppLayout>{children}</AppLayout>;
@@ -309,158 +251,6 @@ function AppRoutes() {
           <StudentRoute>
             <IdCard />
           </StudentRoute>
-        }
-      />
-      <Route
-        path="/lecturer"
-        element={
-          <LecturerRoute>
-            <LecturerDashboard />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/courses"
-        element={
-          <LecturerRoute>
-            <LecturerCourseSelection />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/marks"
-        element={
-          <LecturerRoute>
-            <MarksManagement />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/attendance"
-        element={
-          <LecturerRoute>
-            <LecturerAttendance />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/classes"
-        element={
-          <LecturerRoute>
-            <LecturerClasses />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/messages"
-        element={
-          <LecturerRoute>
-            <LecturerMessages />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/gradebook"
-        element={
-          <LecturerRoute>
-            <LecturerGradeBook />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/assignments"
-        element={
-          <LecturerRoute>
-            <LecturerAssignments />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/enrollments"
-        element={
-          <LecturerRoute>
-            <LecturerEnrollments />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/settings"
-        element={
-          <LecturerRoute>
-            <LecturerSettings />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/announcements"
-        element={
-          <LecturerRoute>
-            <LecturerAnnouncements />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/roster"
-        element={
-          <LecturerRoute>
-            <LecturerRoster />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/analytics"
-        element={
-          <LecturerRoute>
-            <LecturerAnalytics />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/quiz"
-        element={
-          <LecturerRoute>
-            <LecturerQuiz />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/quiz/create"
-        element={
-          <LecturerRoute>
-            <CreateQuiz />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/quiz/:id"
-        element={
-          <LecturerRoute>
-            <QuizView />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/quiz/:id/edit"
-        element={
-          <LecturerRoute>
-            <EditQuiz />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/quiz/:id/results"
-        element={
-          <LecturerRoute>
-            <QuizResults />
-          </LecturerRoute>
-        }
-      />
-      <Route
-        path="/lecturer/id-card"
-        element={
-          <LecturerRoute>
-            <LecturerIdCard />
-          </LecturerRoute>
         }
       />
       <Route
