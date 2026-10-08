@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { getRegBackend } from "@/lib/backendApi";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   CalendarDays,
@@ -87,12 +88,10 @@ export default function AcademicCalendar() {
 
   const loadEvents = async () => {
     try {
-      const resp = await fetch("/api/academic-calendar", {
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!resp.ok) throw new Error("Failed to fetch academic calendar");
-      const body = await resp.json();
-      const list = (body && Array.isArray(body) ? body : body?.data) || [];
+      const body = await getRegBackend<CalendarEvent[] | { data?: CalendarEvent[] }>(
+        "/api/academic-calendar",
+      );
+      const list = (Array.isArray(body) ? body : body?.data) || [];
       setEvents(
         list
           .filter((e: any) => e.is_active !== false)

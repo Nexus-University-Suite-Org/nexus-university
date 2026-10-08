@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getTimetableShareUrl } from "@/lib/config";
-import { getBackend } from "@/lib/backendApi";
+import { getBackend, getRegBackend } from "@/lib/backendApi";
 import { QRCodeSVG } from "qrcode.react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -294,15 +294,10 @@ export default function Timetable() {
 
     const fetchTimetable = async () => {
       try {
-        const res = await fetch(`/api/timetable`, {
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!res.ok) {
-          throw new Error(`Timetable backend error ${res.status}`);
-        }
-        // Same ApiResponse envelope as academic-calendar
-        const body = await res.json();
-        const data = body?.data ?? body;
+        const body = await getRegBackend<
+          TimetableEntry[] | { data?: TimetableEntry[] }
+        >("/api/timetable");
+        const data = Array.isArray(body) ? body : body?.data;
         setEntries(Array.isArray(data) ? data : []);
       } catch (error: any) {
         console.error("Error fetching timetable:", error);
