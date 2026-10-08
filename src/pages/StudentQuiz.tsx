@@ -26,7 +26,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { getMessagingBackend, postMessagingBackend } from "@/lib/backendApi";
+import {
+  getMessagingBackend,
+  postMessagingBackend,
+  resolveStudentIdByEmail,
+} from "@/lib/backendApi";
 
 interface Quiz {
   id: string;
@@ -217,8 +221,19 @@ export default function StudentQuiz() {
     try {
       const timeTaken = Math.floor((new Date().getTime() - quizStartTime.getTime()) / 1000);
 
+      const studentId = await resolveStudentIdByEmail(user.email);
+      if (studentId == null) {
+        toast({
+          title: "Unable to submit",
+          description:
+            "Your student record has not synced to the university system yet. Please contact the registrar.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const payload = {
-        student_id: Number(user.uid),
+        student_id: studentId,
         student_name: user.displayName || "",
         answers: answers,
         time_taken: timeTaken,

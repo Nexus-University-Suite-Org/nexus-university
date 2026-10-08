@@ -45,8 +45,13 @@ import { StudentHeader } from "@/components/layout/StudentHeader";
 import { StudentBottomNav } from "@/components/layout/StudentBottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getBackend, postBackend, postMessagingBackend } from "@/lib/backendApi";
-import { getMessagingBackend } from "@/lib/backendApi";
+import {
+  getBackend,
+  getMessagingBackend,
+  postBackend,
+  postMessagingBackend,
+  resolveStudentIdByEmail,
+} from "@/lib/backendApi";
 
 interface CourseUnit {
   id: string;
@@ -240,21 +245,17 @@ export default function Registration() {
         console.warn("Profile update skipped:", profileError);
       }
 
-      // Resolve the student's Lecturer-Backend profile id by email so the
-      // lecturer portal can display the student's name when reviewing enrollment
-      let studentId = Number(user.uid);
-      try {
-        const lpProfiles = await getMessagingBackend<any[]>(`/api/profiles/`);
-        const lpProfile = (lpProfiles || []).find(
-          (p) =>
-            String(p.email)?.toLowerCase() ===
-            String(user.email || profile?.email || "").toLowerCase(),
-        );
-        if (lpProfile?.id) {
-          studentId = Number(lpProfile.id);
-        }
-      } catch (profileLookupError) {
-        console.warn("LP profile lookup failed, using NAP uid:", profileLookupError);
+      const studentId = await resolveStudentIdByEmail(
+        user.email || profile?.email,
+      );
+      if (studentId == null) {
+        toast({
+          title: "Student record not found",
+          description:
+            "Your student record has not synced to the university system yet. Please contact the registrar before registering.",
+          variant: "destructive",
+        });
+        return;
       }
 
       // Create enrollments via Lecturer-Backend (port 8084)

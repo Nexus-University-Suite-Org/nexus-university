@@ -16,7 +16,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { getMessagingBackend, postMessagingBackend } from "@/lib/backendApi";
+import {
+  getMessagingBackend,
+  postMessagingBackend,
+  resolveStudentIdByEmail,
+} from "@/lib/backendApi";
 
 interface Announcement {
   id: string;
@@ -118,17 +122,20 @@ export default function Announcements() {
     async (announcementId: string) => {
       if (!user?.uid) return;
       try {
-        const params = new URLSearchParams({ student_id: String(user.uid) });
+        const studentId = await resolveStudentIdByEmail(user.email);
+        const params = new URLSearchParams({
+          student_id: studentId != null ? String(studentId) : String(user.uid),
+        });
         const data = await getMessagingBackend<Engagement>(
           `/api/announcements/${announcementId}/engagement?${params}`,
         );
         setEngagement((prev) => ({ ...prev, [announcementId]: data }));
 
-        if (!viewedSet.has(announcementId)) {
+        if (studentId != null && !viewedSet.has(announcementId)) {
           setViewedSet((prev) => new Set(prev).add(announcementId));
           postMessagingBackend(
             `/api/announcements/${announcementId}/engagement/view`,
-            { student_id: Number(user.uid), student_name: user.displayName || "" },
+            { student_id: studentId, student_name: user.displayName || "" },
           ).catch(() => {});
         }
       } catch (error) {
@@ -152,9 +159,14 @@ export default function Announcements() {
   const handleLike = async (announcementId: string) => {
     if (!user?.uid) return;
     try {
+      const studentId = await resolveStudentIdByEmail(user.email);
+      if (studentId == null) {
+        console.warn("Skipping like: student record not synced yet");
+        return;
+      }
       const data = await postMessagingBackend<any>(
         `/api/announcements/${announcementId}/engagement/like`,
-        { student_id: Number(user.uid), student_name: user.displayName || "" },
+        { student_id: studentId, student_name: user.displayName || "" },
       );
       setEngagement((prev) => ({
         ...prev,
@@ -172,11 +184,16 @@ export default function Announcements() {
   const handleComment = async (announcementId: string) => {
     if (!user?.uid || !commentInput[announcementId]?.trim()) return;
     try {
+      const studentId = await resolveStudentIdByEmail(user.email);
+      if (studentId == null) {
+        console.warn("Skipping comment: student record not synced yet");
+        return;
+      }
       setSendingComment((prev) => ({ ...prev, [announcementId]: true }));
       const newComment = await postMessagingBackend<any>(
         `/api/announcements/${announcementId}/engagement/comment`,
         {
-          student_id: Number(user.uid),
+          student_id: studentId,
           student_name: user.displayName || "",
           content: commentInput[announcementId].trim(),
         },

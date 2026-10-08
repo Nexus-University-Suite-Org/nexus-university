@@ -44,6 +44,7 @@ import {
   getBackend,
   getMessagingBackend,
   postMessagingBackend,
+  resolveStudentIdByEmail,
 } from "@/lib/backendApi";
 import { Link } from "react-router-dom";
 
@@ -386,12 +387,23 @@ export function EnrollmentRegistrationTab() {
 
     setSubmitting(true);
     try {
+      const studentId = await resolveStudentIdByEmail(user.email);
+      if (studentId == null) {
+        toast({
+          title: "Student record not found",
+          description:
+            "Your student record has not synced to the university system yet. Please contact the registrar before enrolling.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await postMessagingBackend(
         "/api/enrollments/batch",
         selectedCourses.map((courseCode) => {
           const unit = semesterCourses.find((c) => c.code === courseCode);
           return {
-            studentId: Number(user.uid),
+            studentId,
             courseCode: courseCode,
             courseName: unit?.name || courseCode,
             paperType: paperTypes[courseCode] || "normal",

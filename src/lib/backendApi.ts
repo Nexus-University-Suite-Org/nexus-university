@@ -209,6 +209,30 @@ export async function getMessagingBackend<T>(path: string): Promise<T> {
   }) as Promise<T>;
 }
 
+type StudentRecord = {
+  id?: number | string;
+  email?: string | null;
+};
+
+export async function resolveStudentIdByEmail(
+  email: string | null | undefined,
+): Promise<number | null> {
+  const normalized = email?.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const students = await getMessagingBackend<StudentRecord[]>("/api/students/");
+  const list = Array.isArray(students) ? students : [];
+  const match = list.find(
+    (student) =>
+      student?.email &&
+      String(student.email).trim().toLowerCase() === normalized,
+  );
+
+  if (match?.id == null) return null;
+  const id = Number(match.id);
+  return Number.isFinite(id) ? id : null;
+}
+
 export async function postMessagingBackend<T>(
   path: string,
   payload: unknown,
