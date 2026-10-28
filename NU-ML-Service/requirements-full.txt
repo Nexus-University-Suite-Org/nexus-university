@@ -1,0 +1,5 @@
+# Full ML stack for local development (includes torch via sentence-transformers).
+# The Railway deploy profile is requirements.txt.
+-r requirements.txt
+sentence-transformers>=3.0.0
+faiss-cpu>=1.8.0

@@ -1,0 +1,19 @@
+# Runtime deps installed by Railway's Nixpacks build.
+#
+# Deliberately excludes sentence-transformers / faiss-cpu: those pull torch
+# (~2.5GB CUDA wheel), which is slow to build and fails on the builder.
+#
+# The service handles their absence by design:
+#   app/models/embedding.py     -> built-in TF-IDF when sentence-transformers is missing
+#   app/models/vector_store.py  -> numpy scoring when faiss is missing
+# Both are the documented default behaviour (see README), so the API boots,
+# reports health, and serves /api/chat on this profile.
+#
+# For the full neural-embedding stack (local dev, or a Railway build with a
+# volume at /app/models), use:  pip install -r requirements-full.txt
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+httpx>=0.27.0
+pydantic>=2.7.0
+python-dotenv>=1.0.1
+numpy>=1.26.0

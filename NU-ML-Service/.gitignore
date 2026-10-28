@@ -1,0 +1,23 @@
+# Virtual environment
+.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Runtime data + persisted model artifacts (rebuilt by training).
+# Anchored to the service root: an unanchored "models/" also matches the
+# app/models/ source package and silently drops it from deploys.
+/data/
+/models/
+*.npy
+*.jsonl
+*.faiss
+
+# Logs
+*.log
+server_out.log
+server_err.log

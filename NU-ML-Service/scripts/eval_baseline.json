@@ -1,0 +1,896 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-10T21:04:14.823660+00:00",
+  "n": 63,
+  "passed": 63,
+  "pass_rate": 1.0,
+  "fallback_rate": 0.0,
+  "overreach_rate": 0.0,
+  "title_recall": 0.9886363636363636,
+  "contains_rate": 1.0,
+  "topic_precision": 0.8367346938775511,
+  "source_stats": {
+    "min": 1,
+    "median": 3.0,
+    "p95": 6,
+    "max": 7
+  },
+  "answer_len": {
+    "min": 80,
+    "median": 609,
+    "p95": 1097,
+    "max": 1559
+  },
+  "kind_counts": {
+    "catalog": 4,
+    "single": 9,
+    "multi": 31,
+    "contact": 5,
+    "smalltalk": 9,
+    "fallback": 5
+  },
+  "fixtures": [
+    {
+      "id": "cat-01",
+      "topic": "program_list",
+      "should_answer": true,
+      "ok": true,
+      "kind": "catalog",
+      "quoted": [
+        "Bachelor of Arts in Education",
+        "Bachelor of Business Administration",
+        "Bachelor of Engineering in Mechanical Engineering",
+        "Bachelor of Medicine and Bachelor of Surgery",
+        "Bachelor of Science in Computer Science",
+        "Master of Science in Data Science"
+      ],
+      "failures": [],
+      "answer": "Here are the programmes our university offers:\n\n• **Bachelor of Medicine and Bachelor of Surgery** — Code: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.\n• **Master of Science in Data Science** — Code: MSC-DS. College: College of Computing and Information Sciences. Level: Postgraduate. Duration: 2 years. Credits: 60.\n• **Bachelor of Arts in Education** — Code: BA-EDU. College: College of Education and External Studies. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Engineering in Mechanical Engineering** — Code: BENG-ME. College: College of Engineering, Design, Art and Technology. Level: Undergraduate. Duration: 5 years. Credits: 150.\n• **Bachelor of Business Administration** — Code: BBA-BA. College: College of Business and Management Sciences. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Science in Computer Science** — Code: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.\n\nWould you like details on any of these?",
+      "got_topic": "program_list"
+    },
+    {
+      "id": "cat-02",
+      "topic": "program_list",
+      "should_answer": true,
+      "ok": true,
+      "kind": "catalog",
+      "quoted": [
+        "Bachelor of Arts in Education",
+        "Bachelor of Business Administration",
+        "Bachelor of Engineering in Mechanical Engineering",
+        "Bachelor of Medicine and Bachelor of Surgery",
+        "Bachelor of Science in Computer Science",
+        "Master of Science in Data Science"
+      ],
+      "failures": [],
+      "answer": "Here are the programmes our university offers:\n\n• **Bachelor of Medicine and Bachelor of Surgery** — Code: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.\n• **Master of Science in Data Science** — Code: MSC-DS. College: College of Computing and Information Sciences. Level: Postgraduate. Duration: 2 years. Credits: 60.\n• **Bachelor of Arts in Education** — Code: BA-EDU. College: College of Education and External Studies. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Engineering in Mechanical Engineering** — Code: BENG-ME. College: College of Engineering, Design, Art and Technology. Level: Undergraduate. Duration: 5 years. Credits: 150.\n• **Bachelor of Business Administration** — Code: BBA-BA. College: College of Business and Management Sciences. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Science in Computer Science** — Code: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.\n\nWould you like details on any of these?",
+      "got_topic": "program_list"
+    },
+    {
+      "id": "cat-03",
+      "topic": "program_list",
+      "should_answer": true,
+      "ok": true,
+      "kind": "catalog",
+      "quoted": [
+        "Bachelor of Arts in Education",
+        "Bachelor of Business Administration",
+        "Bachelor of Engineering in Mechanical Engineering",
+        "Bachelor of Medicine and Bachelor of Surgery",
+        "Bachelor of Science in Computer Science",
+        "Master of Science in Data Science"
+      ],
+      "failures": [],
+      "answer": "Here are the programmes our university offers:\n\n• **Bachelor of Medicine and Bachelor of Surgery** — Code: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.\n• **Master of Science in Data Science** — Code: MSC-DS. College: College of Computing and Information Sciences. Level: Postgraduate. Duration: 2 years. Credits: 60.\n• **Bachelor of Arts in Education** — Code: BA-EDU. College: College of Education and External Studies. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Engineering in Mechanical Engineering** — Code: BENG-ME. College: College of Engineering, Design, Art and Technology. Level: Undergraduate. Duration: 5 years. Credits: 150.\n• **Bachelor of Business Administration** — Code: BBA-BA. College: College of Business and Management Sciences. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Science in Computer Science** — Code: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.\n\nWould you like details on any of these?",
+      "got_topic": "program_list"
+    },
+    {
+      "id": "cat-04",
+      "topic": "program_list",
+      "should_answer": true,
+      "ok": true,
+      "kind": "catalog",
+      "quoted": [
+        "Bachelor of Arts in Education",
+        "Bachelor of Business Administration",
+        "Bachelor of Engineering in Mechanical Engineering",
+        "Bachelor of Medicine and Bachelor of Surgery",
+        "Bachelor of Science in Computer Science",
+        "Master of Science in Data Science"
+      ],
+      "failures": [],
+      "answer": "Here are the programmes our university offers:\n\n• **Bachelor of Medicine and Bachelor of Surgery** — Code: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.\n• **Master of Science in Data Science** — Code: MSC-DS. College: College of Computing and Information Sciences. Level: Postgraduate. Duration: 2 years. Credits: 60.\n• **Bachelor of Arts in Education** — Code: BA-EDU. College: College of Education and External Studies. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Engineering in Mechanical Engineering** — Code: BENG-ME. College: College of Engineering, Design, Art and Technology. Level: Undergraduate. Duration: 5 years. Credits: 150.\n• **Bachelor of Business Administration** — Code: BBA-BA. College: College of Business and Management Sciences. Level: Undergraduate. Duration: 3 years. Credits: 90.\n• **Bachelor of Science in Computer Science** — Code: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.\n\nWould you like details on any of these?",
+      "got_topic": "program_list"
+    },
+    {
+      "id": "pg-01",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Bachelor of Science in Computer Science"
+      ],
+      "failures": [],
+      "answer": "**Bachelor of Science in Computer Science**\nCode: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.",
+      "got_topic": "program_detail"
+    },
+    {
+      "id": "pg-02",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Bachelor of Science in Computer Science"
+      ],
+      "failures": [],
+      "answer": "**Bachelor of Science in Computer Science**\nCode: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.",
+      "got_topic": "program_detail"
+    },
+    {
+      "id": "pg-03",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Bachelor of Medicine and Bachelor of Surgery"
+      ],
+      "failures": [],
+      "answer": "**Bachelor of Medicine and Bachelor of Surgery**\nCode: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.",
+      "got_topic": "program_detail"
+    },
+    {
+      "id": "pg-04",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Bachelor of Engineering in Mechanical Engineering"
+      ],
+      "failures": [],
+      "answer": "**Bachelor of Engineering in Mechanical Engineering**\nCode: BENG-ME. College: College of Engineering, Design, Art and Technology. Level: Undergraduate. Duration: 5 years. Credits: 150.",
+      "got_topic": "program_detail"
+    },
+    {
+      "id": "pg-05",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Master of Science in Data Science"
+      ],
+      "failures": [],
+      "answer": "**Master of Science in Data Science**\nCode: MSC-DS. College: College of Computing and Information Sciences. Level: Postgraduate. Duration: 2 years. Credits: 60.",
+      "got_topic": "program_detail"
+    },
+    {
+      "id": "pg-06",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Master of Science in Data Science"
+      ],
+      "failures": [],
+      "answer": "**Master of Science in Data Science**\nCode: MSC-DS. College: College of Computing and Information Sciences. Level: Postgraduate. Duration: 2 years. Credits: 60.",
+      "got_topic": "program_detail"
+    },
+    {
+      "id": "pg-07",
+      "topic": "program_detail",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Bachelor of Science in Computer Science"
+      ],
+      "failures": [],
+      "answer": "**Bachelor of Science in Computer Science**\nCode: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.",
+      "got_topic": "question"
+    },
+    {
+      "id": "fee-01",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "Merit-Based Excellence Scholarship",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "fee-02",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "STEM Women Scholarship",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "fee-03",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "Bachelor of Science in Computer Science",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Bachelor of Science in Computer Science**\nCode: BSC-CS. College: College of Computing and Information Sciences. Level: Undergraduate. Duration: 4 years. Credits: 120.\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "fee-04",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "Merit-Based Excellence Scholarship",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "pay-01",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "Merit-Based Excellence Scholarship",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "pay-02",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "Merit-Based Excellence Scholarship",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "pay-03",
+      "topic": "fees",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Are there payment plans available?",
+        "Merit-Based Excellence Scholarship",
+        "What are the tuition fees?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Are there payment plans available?**\nYes, we offer flexible payment plans including full payment discounts, installment plans (4 equal payments), and employer sponsorship arrangements.\n\n**What are the tuition fees?**\nTuition fees vary by program and level of study. Undergraduate programs typically range from UGX 2,500,000 to 4,500,000 per year.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "fees"
+    },
+    {
+      "id": "apply-01",
+      "topic": "apply",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "How do I apply for admission?",
+        "How do I register for courses?",
+        "What is the application deadline?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**How do I apply for admission?**\nYou can apply online through our application portal. Create an account, fill in your details, upload required documents, and submit your application.\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**What is the application deadline?**\nThe main application deadline is typically in March for the September intake. A second intake may be available in January for select programs.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "apply"
+    },
+    {
+      "id": "apply-02",
+      "topic": "apply",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "How do I apply for admission?",
+        "How do I register for courses?",
+        "What is the application deadline?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**How do I apply for admission?**\nYou can apply online through our application portal. Create an account, fill in your details, upload required documents, and submit your application.\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**What is the application deadline?**\nThe main application deadline is typically in March for the September intake. A second intake may be available in January for select programs.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "apply"
+    },
+    {
+      "id": "apply-03",
+      "topic": "apply",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "How do I apply for admission?",
+        "How do I register for courses?",
+        "What is the application deadline?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**How do I apply for admission?**\nYou can apply online through our application portal. Create an account, fill in your details, upload required documents, and submit your application.\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**What is the application deadline?**\nThe main application deadline is typically in March for the September intake. A second intake may be available in January for select programs.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "apply"
+    },
+    {
+      "id": "req-01",
+      "topic": "requirements",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Bachelor of Medicine and Bachelor of Surgery",
+        "STEM Women Scholarship",
+        "What are the entry requirements for undergraduate programs?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**What are the entry requirements for undergraduate programs?**\nApplicants need a minimum of 5 O-Level credits including English and Mathematics, and 2 principal passes at A-Level or equivalent qualifications.\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**Bachelor of Medicine and Bachelor of Surgery**\nCode: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "requirements"
+    },
+    {
+      "id": "req-02",
+      "topic": "requirements",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Bachelor of Business Administration",
+        "Bachelor of Medicine and Bachelor of Surgery",
+        "What are the entry requirements for undergraduate programs?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**What are the entry requirements for undergraduate programs?**\nApplicants need a minimum of 5 O-Level credits including English and Mathematics, and 2 principal passes at A-Level or equivalent qualifications.\n\n**Bachelor of Medicine and Bachelor of Surgery**\nCode: MBCHB. College: College of Health Sciences. Level: Undergraduate. Duration: 5 years. Credits: 180.\n\n**Bachelor of Business Administration**\nCode: BBA-BA. College: College of Business and Management Sciences. Level: Undergraduate. Duration: 3 years. Credits: 90.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "requirements"
+    },
+    {
+      "id": "req-03",
+      "topic": "requirements",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship",
+        "What are the entry requirements for undergraduate programs?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**What are the entry requirements for undergraduate programs?**\nApplicants need a minimum of 5 O-Level credits including English and Mathematics, and 2 principal passes at A-Level or equivalent qualifications.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "requirements"
+    },
+    {
+      "id": "ddl-01",
+      "topic": "deadline",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship",
+        "What is the application deadline?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**What is the application deadline?**\nThe main application deadline is typically in March for the September intake. A second intake may be available in January for select programs.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "deadline"
+    },
+    {
+      "id": "ddl-02",
+      "topic": "deadline",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship",
+        "What is the application deadline?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**What is the application deadline?**\nThe main application deadline is typically in March for the September intake. A second intake may be available in January for select programs.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "deadline"
+    },
+    {
+      "id": "sch-01",
+      "topic": "scholarships",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Community Service Scholarship",
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**Community Service Scholarship**\nPartial scholarship for students demonstrating exceptional community service commitment. Covers 50% of tuition. Deadline: 14 November 2026. Eligibility: Evidence of sustained community service involvement. Personal statement required.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "scholarships"
+    },
+    {
+      "id": "sch-02",
+      "topic": "scholarships",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Community Service Scholarship",
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**Community Service Scholarship**\nPartial scholarship for students demonstrating exceptional community service commitment. Covers 50% of tuition. Deadline: 14 November 2026. Eligibility: Evidence of sustained community service involvement. Personal statement required.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "scholarships"
+    },
+    {
+      "id": "sch-03",
+      "topic": "scholarships",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Community Service Scholarship",
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\n**Community Service Scholarship**\nPartial scholarship for students demonstrating exceptional community service commitment. Covers 50% of tuition. Deadline: 14 November 2026. Eligibility: Evidence of sustained community service involvement. Personal statement required.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "scholarships"
+    },
+    {
+      "id": "sch-04",
+      "topic": "scholarships",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Community Service Scholarship",
+        "Merit-Based Excellence Scholarship",
+        "STEM Women Scholarship"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**STEM Women Scholarship**\nScholarship for women pursuing STEM programs. Covers full tuition and provides mentorship. Deadline: 30 October 2026. Eligibility: Female applicants to STEM programs. Minimum B- average at A-Level.\n\n**Community Service Scholarship**\nPartial scholarship for students demonstrating exceptional community service commitment. Covers 50% of tuition. Deadline: 14 November 2026. Eligibility: Evidence of sustained community service involvement. Personal statement required.\n\n**Merit-Based Excellence Scholarship**\nFull tuition scholarship for outstanding academic performers. Covers tuition, accommodation, and a monthly stipend. Deadline: 29 November 2026. Eligibility: Minimum A-Level aggregate of 10 points. Must be a first-year applicant.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "scholarships"
+    },
+    {
+      "id": "news-01",
+      "topic": "news",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "New $12M AI Research Lab Opens on Campus",
+        "Partnership with MIT Launches Joint Research Program",
+        "Spring Graduation Celebrates 3,200 Graduates",
+        "Student Startup Raises $2.4M in Seed Funding",
+        "University Application Portal Ranks Among Top 200 Globally"
+      ],
+      "failures": [],
+      "answer": "Here are the latest updates from our university:\n\n• **Spring Graduation Celebrates 3,200 Graduates** — This year's graduation ceremony marked the largest class in the institute's history, with graduates representing a wide mix of disciplines and national backgrounds.\n\nStudent speakers reflected on the value of interdisciplinary learning and…\n• **Student Startup Raises $2.4M in Seed Funding** — AgriSense began as a capstone project focused on affordable field monitoring for smallholder farmers. After successful pilots across three districts, the founding team refined the product into a decision-support platform.\n\nThe new…\n• **New $12M AI Research Lab Opens on Campus** — The new AI lab brings together faculty from computing, medicine, agriculture, and public policy to develop practical systems with clear social value. The facility includes collaborative workspaces, model evaluation suites, and a secure…\n• **University Application Portal Ranks Among Top 200 Globally** — The latest rankings cite research output, graduate employability, and international collaboration as the main drivers behind the move into the global top tier. The result follows several years of strategic investment in research labs…\n• **Partnership with MIT Launches Joint Research Program** — The new agreement creates a multi-year framework for shared research agendas, visiting scholar placements, and co-supervised graduate work. Initial emphasis will be on quantum systems and advanced materials. Published at: 30 September 2026.\n\nWould you like details on any of these?",
+      "got_topic": "news"
+    },
+    {
+      "id": "news-02",
+      "topic": "news",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "Spring Graduation Celebrates 3,200 Graduates"
+      ],
+      "failures": [],
+      "answer": "**Spring Graduation Celebrates 3,200 Graduates**\nThis year's graduation ceremony marked the largest class in the institute's history, with graduates representing a wide mix of disciplines and national backgrounds.\n\nStudent speakers reflected on the value of interdisciplinary learning and the confidence built through project-based coursework, internships, and faculty mentorship. Published at: 30 September 2026.",
+      "got_topic": "question"
+    },
+    {
+      "id": "news-03",
+      "topic": "news",
+      "should_answer": true,
+      "ok": true,
+      "kind": "single",
+      "quoted": [
+        "New $12M AI Research Lab Opens on Campus"
+      ],
+      "failures": [],
+      "answer": "**New $12M AI Research Lab Opens on Campus**\nThe new AI lab brings together faculty from computing, medicine, agriculture, and public policy to develop practical systems with clear social value. The facility includes collaborative workspaces, model evaluation suites, and a secure environment for applied research.\n\nInitial projects include diagnostic support tools for regional clinics, crop risk forecasting systems, and public-service decision support for local agencies. Published at: 30 September 2026.",
+      "got_topic": "question"
+    },
+    {
+      "id": "evt-01",
+      "topic": "events",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Alumni Homecoming",
+        "International Culture Week",
+        "Open Day 2026",
+        "Research Symposium 2026"
+      ],
+      "failures": [],
+      "answer": "Here are the upcoming events at our university:\n\n• **Alumni Homecoming** — Annual alumni reunion with networking sessions, campus tours, and gala dinner. Event date: 29 December 2026.\n• **International Culture Week** — Celebrate diversity with performances, food, and cultural exhibitions from around the world. Event date: 29 November 2026.\n• **Research Symposium 2026** — Annual research symposium featuring keynote speakers from industry and academia. Event date: 14 November 2026.\n• **Open Day 2026** — Join us for campus tours, faculty meetings, and program information sessions. Event date: 30 October 2026.\n\nWhich of these would you like to know more about?",
+      "got_topic": "events"
+    },
+    {
+      "id": "evt-02",
+      "topic": "events",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Alumni Homecoming",
+        "International Culture Week",
+        "Open Day 2026",
+        "Research Symposium 2026"
+      ],
+      "failures": [],
+      "answer": "Here are the upcoming events at our university:\n\n• **Alumni Homecoming** — Annual alumni reunion with networking sessions, campus tours, and gala dinner. Event date: 29 December 2026.\n• **International Culture Week** — Celebrate diversity with performances, food, and cultural exhibitions from around the world. Event date: 29 November 2026.\n• **Research Symposium 2026** — Annual research symposium featuring keynote speakers from industry and academia. Event date: 14 November 2026.\n• **Open Day 2026** — Join us for campus tours, faculty meetings, and program information sessions. Event date: 30 October 2026.\n\nWhich of these would you like to know more about?",
+      "got_topic": "events"
+    },
+    {
+      "id": "evt-03",
+      "topic": "events",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Alumni Homecoming",
+        "International Culture Week",
+        "Open Day 2026",
+        "Research Symposium 2026"
+      ],
+      "failures": [],
+      "answer": "Here are the upcoming events at our university:\n\n• **Alumni Homecoming** — Annual alumni reunion with networking sessions, campus tours, and gala dinner. Event date: 29 December 2026.\n• **International Culture Week** — Celebrate diversity with performances, food, and cultural exhibitions from around the world. Event date: 29 November 2026.\n• **Research Symposium 2026** — Annual research symposium featuring keynote speakers from industry and academia. Event date: 14 November 2026.\n• **Open Day 2026** — Join us for campus tours, faculty meetings, and program information sessions. Event date: 30 October 2026.\n\nWhich of these would you like to know more about?",
+      "got_topic": "events"
+    },
+    {
+      "id": "st-01",
+      "topic": "stories",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Building a Business from Classroom Knowledge",
+        "David Mugisha",
+        "From Village to Virtual Reality Lab",
+        "Grace Achieng",
+        "James Okello",
+        "Research That Changes Lives",
+        "Sarah Nakamya"
+      ],
+      "failures": [],
+      "answer": "Here are a few stories from our students and alumni:\n\n• **Research That Changes Lives** — My research project on clean water access started as a class assignment and became my life's work. With faculty guidance and a small research grant, I developed a low-cost water purification system now used in 12 communities.\n\nThe…\n• **Building a Business from Classroom Knowledge** — When I enrolled in the business program, I thought I was just getting a degree. What I actually got was a blueprint for building a company. The entrepreneurship courses and incubator program gave me confidence and skills.\n\nTwo years later…\n• **From Village to Virtual Reality Lab** — Growing up in a small village in northern Uganda, I never imagined I would be working with virtual reality technology. The computer science program opened doors I didn't know existed. Through the innovation hub, I gained access to…\n• **David Mugisha** — David works as a project manager at a major construction firm and has led several landmark building projects.\n• **Grace Achieng** — Grace is a high school principal who has transformed her school into one of the top-performing institutions in her district.\n• **James Okello** — James founded a successful agribusiness that employs over 200 people across East Africa.\n• **Sarah Nakamya** — Sarah is now a Senior Software Engineer at a leading fintech company. She credits the practical projects and mentorship for her career success.\n\nWould you like to read any of these in full?",
+      "got_topic": "stories"
+    },
+    {
+      "id": "st-02",
+      "topic": "stories",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Building a Business from Classroom Knowledge",
+        "David Mugisha",
+        "From Village to Virtual Reality Lab",
+        "Grace Achieng",
+        "James Okello",
+        "Research That Changes Lives",
+        "Sarah Nakamya"
+      ],
+      "failures": [],
+      "answer": "Here are a few stories from our students and alumni:\n\n• **Research That Changes Lives** — My research project on clean water access started as a class assignment and became my life's work. With faculty guidance and a small research grant, I developed a low-cost water purification system now used in 12 communities.\n\nThe…\n• **Building a Business from Classroom Knowledge** — When I enrolled in the business program, I thought I was just getting a degree. What I actually got was a blueprint for building a company. The entrepreneurship courses and incubator program gave me confidence and skills.\n\nTwo years later…\n• **From Village to Virtual Reality Lab** — Growing up in a small village in northern Uganda, I never imagined I would be working with virtual reality technology. The computer science program opened doors I didn't know existed. Through the innovation hub, I gained access to…\n• **David Mugisha** — David works as a project manager at a major construction firm and has led several landmark building projects.\n• **Grace Achieng** — Grace is a high school principal who has transformed her school into one of the top-performing institutions in her district.\n• **James Okello** — James founded a successful agribusiness that employs over 200 people across East Africa.\n• **Sarah Nakamya** — Sarah is now a Senior Software Engineer at a leading fintech company. She credits the practical projects and mentorship for her career success.\n\nWould you like to read any of these in full?",
+      "got_topic": "stories"
+    },
+    {
+      "id": "cam-01",
+      "topic": "campus",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Is accommodation available on campus?",
+        "Library",
+        "Terms and Conditions"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Is accommodation available on campus?**\nOn-campus residence is available for first-year students and subject to availability. The university also maintains a list of approved off-campus options.\n\n**Terms and Conditions**\nBy accessing and using this portal, you accept and agree to be bound by these terms and conditions. All information submitted must be truthful and accurate. Content on this portal is protected by copyright laws.\n\n**Library**\nLibrary (/quick-links/library-portal).\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "campus"
+    },
+    {
+      "id": "sup-01",
+      "topic": "campus",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Community Service Scholarship",
+        "Student Portal",
+        "What student support services are available?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**What student support services are available?**\nWe offer academic advising, career counseling, health services, disability support, library services, IT help desk, and various student organizations.\n\n**Community Service Scholarship**\nPartial scholarship for students demonstrating exceptional community service commitment. Covers 50% of tuition. Deadline: 14 November 2026. Eligibility: Evidence of sustained community service involvement. Personal statement required.\n\n**Student Portal**\nStudent Portal (/quick-links/student-portal).\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "campus"
+    },
+    {
+      "id": "reg-01",
+      "topic": "apply",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "How do I apply for admission?",
+        "How do I register for courses?",
+        "What is the application deadline?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**How do I apply for admission?**\nYou can apply online through our application portal. Create an account, fill in your details, upload required documents, and submit your application.\n\n**What is the application deadline?**\nThe main application deadline is typically in March for the September intake. A second intake may be available in January for select programs.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "apply"
+    },
+    {
+      "id": "cal-01",
+      "topic": "campus",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "Academic Calendar",
+        "How do I register for courses?",
+        "What student support services are available?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Academic Calendar**\nAcademic Calendar (/quick-links/academic-calendar).\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**What student support services are available?**\nWe offer academic advising, career counseling, health services, disability support, library services, IT help desk, and various student organizations.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "campus"
+    },
+    {
+      "id": "ptl-01",
+      "topic": "campus",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "How do I register for courses?",
+        "Student Portal",
+        "What student support services are available?"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**Student Portal**\nStudent Portal (/quick-links/student-portal).\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**What student support services are available?**\nWe offer academic advising, career counseling, health services, disability support, library services, IT help desk, and various student organizations.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "campus"
+    },
+    {
+      "id": "con-01",
+      "topic": "contact",
+      "should_answer": true,
+      "ok": true,
+      "kind": "contact",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm not able to share the admissions office's phone or email yet — they haven't been published on the site. You can reach the team through the Contact page, and they'll help with anything about courses, fees or applications. Is there a programme you'd like to ask about in the meantime?",
+      "got_topic": "apply"
+    },
+    {
+      "id": "con-02",
+      "topic": "contact",
+      "should_answer": true,
+      "ok": true,
+      "kind": "contact",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm not able to share the admissions office's phone or email yet — they haven't been published on the site. You can reach the team through the Contact page, and they'll help with anything about courses, fees or applications. Is there a programme you'd like to ask about in the meantime?",
+      "got_topic": "question"
+    },
+    {
+      "id": "con-03",
+      "topic": "contact",
+      "should_answer": true,
+      "ok": true,
+      "kind": "contact",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm not able to share the admissions office's phone or email yet — they haven't been published on the site. You can reach the team through the Contact page, and they'll help with anything about courses, fees or applications. Is there a programme you'd like to ask about in the meantime?",
+      "got_topic": "question"
+    },
+    {
+      "id": "con-04",
+      "topic": "contact",
+      "should_answer": true,
+      "ok": true,
+      "kind": "contact",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm not able to share the admissions office's phone or email yet — they haven't been published on the site. You can reach the team through the Contact page, and they'll help with anything about courses, fees or applications. Is there a programme you'd like to ask about in the meantime?",
+      "got_topic": "question"
+    },
+    {
+      "id": "con-05",
+      "topic": "contact",
+      "should_answer": true,
+      "ok": true,
+      "kind": "contact",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm not able to share the admissions office's phone or email yet — they haven't been published on the site. You can reach the team through the Contact page, and they'll help with anything about courses, fees or applications. Is there a programme you'd like to ask about in the meantime?",
+      "got_topic": "apply"
+    },
+    {
+      "id": "sm-01",
+      "topic": "greeting",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "Hello! I'm the assistant for our university. I can help with programmes, how to apply, entry requirements, tuition and fees, scholarships, and more. What would you like to know?"
+    },
+    {
+      "id": "sm-02",
+      "topic": "greeting",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "Hello! I'm the assistant for our university. I can help with programmes, how to apply, entry requirements, tuition and fees, scholarships, and more. What would you like to know?"
+    },
+    {
+      "id": "sm-03",
+      "topic": "wellbeing",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm doing well, thanks for asking! How can I help you with our university — programmes, applications, entry requirements, tuition and fees, or scholarships?"
+    },
+    {
+      "id": "sm-04",
+      "topic": "thanks",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "You're welcome! Feel free to ask if you need anything else about our university."
+    },
+    {
+      "id": "sm-05",
+      "topic": "farewell",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "Goodbye! If you need help later, just open this chat again. Best of luck with your application!"
+    },
+    {
+      "id": "sm-06",
+      "topic": "identity",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm the assistant for our university, a virtual guide for programmes, admissions, entry requirements, tuition and fees, scholarships, and more."
+    },
+    {
+      "id": "sm-07",
+      "topic": "identity",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "I'm the assistant for our university, a virtual guide for programmes, admissions, entry requirements, tuition and fees, scholarships, and more."
+    },
+    {
+      "id": "sm-08",
+      "topic": "capability",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "I can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, and student success stories. What would you like to know?"
+    },
+    {
+      "id": "sm-09",
+      "topic": "capability",
+      "should_answer": true,
+      "ok": true,
+      "kind": "smalltalk",
+      "quoted": [],
+      "failures": [],
+      "answer": "I can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, and student success stories. What would you like to know?"
+    },
+    {
+      "id": "boss-01",
+      "topic": "out_of_scope",
+      "should_answer": false,
+      "ok": true,
+      "kind": "fallback",
+      "quoted": [],
+      "failures": [],
+      "answer": "I couldn't find that in our information yet. The admissions office can give you an accurate answer.\n\nI can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, or student success stories."
+    },
+    {
+      "id": "boss-02",
+      "topic": "out_of_scope",
+      "should_answer": false,
+      "ok": true,
+      "kind": "fallback",
+      "quoted": [],
+      "failures": [],
+      "answer": "I couldn't find that in our information yet. The admissions office can give you an accurate answer.\n\nI can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, or student success stories."
+    },
+    {
+      "id": "boss-03",
+      "topic": "out_of_scope",
+      "should_answer": false,
+      "ok": true,
+      "kind": "fallback",
+      "quoted": [],
+      "failures": [],
+      "answer": "I couldn't find that in our information yet. The admissions office can give you an accurate answer.\n\nI can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, or student success stories."
+    },
+    {
+      "id": "boss-04",
+      "topic": "out_of_scope",
+      "should_answer": false,
+      "ok": true,
+      "kind": "fallback",
+      "quoted": [],
+      "failures": [],
+      "answer": "I couldn't find that in our information yet. The admissions office can give you an accurate answer.\n\nI can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, or student success stories."
+    },
+    {
+      "id": "boss-05",
+      "topic": "out_of_scope",
+      "should_answer": false,
+      "ok": true,
+      "kind": "fallback",
+      "quoted": [],
+      "failures": [],
+      "answer": "I couldn't find that in our information yet. The admissions office can give you an accurate answer.\n\nI can help with programmes offered, how to apply, entry requirements, tuition and fees, scholarships, admission schemes, news and events, or student success stories."
+    },
+    {
+      "id": "schm-01",
+      "topic": "apply",
+      "should_answer": true,
+      "ok": true,
+      "kind": "multi",
+      "quoted": [
+        "How do I apply for admission?",
+        "How do I register for courses?",
+        "Welcome to University Application Portal"
+      ],
+      "failures": [],
+      "answer": "Here's what our information says:\n\n**How do I apply for admission?**\nYou can apply online through our application portal. Create an account, fill in your details, upload required documents, and submit your application.\n\n**How do I register for courses?**\nCourse registration is done online through the student portal during the registration period. Consult with your academic advisor before selecting courses.\n\n**Welcome to University Application Portal**\nPage key: home. Section key: hero. Subtitle: Empowering the next generation of leaders through excellence in education, research, and community engagement.\n\nLet me know if you'd like more detail on any of these.",
+      "got_topic": "apply"
+    }
+  ]
+}
