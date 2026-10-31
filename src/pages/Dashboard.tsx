@@ -38,6 +38,99 @@ import { ProgressRing } from "@/components/ui/ProgressRing";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMessagingBackend, MESSAGING_API_BASE_URL } from "@/lib/backendApi";
 
+/* ------------------------------------------------------------------ */
+/* Debug instrumentation                                              */
+/* Filter the console on "[Dashboard]" for page-level logs and         */
+/* "[API]" for the HTTP layer (src/lib/backendApi.ts).                 */
+/* ------------------------------------------------------------------ */
+
+const LOG_TAG = "[Dashboard]";
+const AUTH_TOKEN_KEY = "nexus-auth-token";
+const mountId = `mount-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+type LogDetail = Record<string, unknown>;
+
+function log(stage: string, detail?: LogDetail) {
+  console.log(`${LOG_TAG} ${stage}`, detail ?? "");
+}
+
+function warn(stage: string, detail?: LogDetail) {
+  console.warn(`${LOG_TAG} ${stage}`, detail ?? "");
+}
+
+function error(stage: string, detail?: LogDetail) {
+  console.error(`${LOG_TAG} ${stage}`, detail ?? "");
+}
+
+function describeError(err: unknown) {
+  const base: LogDetail = {
+    raw: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    stack:
+      err instanceof Error
+        ? err.stack?.split("\n").slice(0, 4).join("\n")
+        : undefined,
+  };
+
+  if (err instanceof TypeError) {
+    return {
+      ...base,
+      kind: "network",
+      hint: "fetch() rejected before any HTTP response arrived. Backend down, wrong base URL, or blocked by CORS. Cross-check the [API] request log for the URL attempted and compare pageOrigin against the backend's CORS allow-list.",
+    };
+  }
+  if (err instanceof SyntaxError) {
+    return {
+      ...base,
+      kind: "json-parse",
+      hint: "The response body was not valid JSON. Check the [API] response log for the content-type and body preview.",
+    };
+  }
+  return {
+    ...base,
+    kind: "http-or-unknown",
+    hint: "Look for the matching [API] response log for the HTTP status code.",
+  };
+}
+
+/**
+ * Every fetch on this page is individually `.catch(() => [])`, so a failing
+ * endpoint degrades to an empty list with no visible error. This reports the
+ * raw length, the fields the page actually reads, and any rows missing them.
+ */
+function inspectRows(label: string, rows: unknown, fields: string[]) {
+  if (!Array.isArray(rows)) {
+    error(`${label}.not-an-array`, {
+      receivedType: rows === null ? "null" : typeof rows,
+      preview: JSON.stringify(rows ?? null)?.slice(0, 200),
+    });
+    return;
+  }
+
+  const problems = rows
+    .map((row, index) => {
+      const r = row as Record<string, unknown> | null;
+      if (!r || typeof r !== "object") {
+        return { index, issue: "row is not an object", value: String(row) };
+      }
+      const missing = fields.filter(
+        (f) => r[f] === undefined || r[f] === null || r[f] === "",
+      );
+      return missing.length ? { index, missing } : null;
+    })
+    .filter(Boolean);
+
+  if (problems.length) {
+    warn(`${label}.rows-missing-fields`, {
+      total: rows.length,
+      rowsWithProblems: problems.length,
+      sample: problems.slice(0, 5),
+      expectedFields: fields,
+    });
+  } else {
+    log(`${label}.shape-ok`, { total: rows.length });
+  }
+}
+
 type ResultCourse = {
   title: string;
   code: string;
@@ -150,6 +243,143 @@ export default function Dashboard() {
   const [upcomingQuizzes, setUpcomingQuizzes] = useState<DashboardQuiz[]>([]);
   const [quizzesLoading, setQuizzesLoading] = useState(true);
 
+  useEffect(() => {
+    let authTokenPresent = false;
+    try {
+      authTokenPresent = Boolean(window.localStorage.getItem(AUTH_TOKEN_KEY));
+    } catch {
+      authTokenPresent = false;
+    }
+
+    log("mount", {
+      mountId,
+      messagingBaseUrl: MESSAGING_API_BASE_URL,
+      pageOrigin: window.location.origin,
+      authTokenPresent,
+      isSecureContext: window.isSecureContext,
+      userPresent: Boolean(user),
+      profilePresent: Boolean(profile),
+      viteEnv: {
+        VITE_WEBMAIL_API_BASE_URL: import.meta.env.VITE_WEBMAIL_API_BASE_URL,
+        VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+        VITE_NU_API_BASE_URL: import.meta.env.VITE_NU_API_BASE_URL,
+      },
+      note: "This page reads /api/profiles, /api/course-units, /api/student-grades, /api/quizzes, /api/quiz-attempts, /api/live-sessions and /api/enrollments from messagingBaseUrl. If that host is the wrong backend those paths 404 and every list silently renders empty.",
+    });
+
+    const onWindowError = (event: ErrorEvent) => {
+      error("window.error", {
+        message: event.message,
+        source: `${event.filename}:${event.lineno}:${event.colno}`,
+      });
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      error("window.unhandledrejection", { reason: String(event.reason) });
+    };
+
+    window.addEventListener("error", onWindowError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    return () => {
+      log("unmount", { mountId });
+      window.removeEventListener("error", onWindowError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+    };
+  }, []);
+
+  useEffect(() => {
+    log("auth.changed", {
+      mountId,
+      hasUser: Boolean(user),
+      uid: user?.uid ?? null,
+      uidType: typeof user?.uid,
+      email: user?.email ?? null,
+      hasProfile: Boolean(profile),
+      profileRole: profile?.role ?? null,
+      profileFullName: profile?.full_name ?? null,
+      note: "profile.full_name drives displayName; user.displayName and the literal 'Student' are the fallbacks.",
+    });
+  }, [user, profile]);
+
+  useEffect(() => {
+    const flags = {
+      loadingStats,
+      resultsLoading,
+      assignmentsLoading,
+      liveSessionsLoading,
+      quizzesLoading,
+    };
+    const allLoading = Object.values(flags).every(Boolean);
+
+    if (allLoading) {
+      warn("loading.all-flags-true", {
+        mountId,
+        ...flags,
+        note: "loadDashboard() bails early when user is falsy, and its finally block is what clears these flags. All five stuck true means loadDashboard never ran to completion.",
+      });
+    }
+  }, [
+    loadingStats,
+    resultsLoading,
+    assignmentsLoading,
+    liveSessionsLoading,
+    quizzesLoading,
+  ]);
+
+  useEffect(() => {
+    const gradeEntries = termResults.reduce(
+      (sum, term) => sum + term.entries.length,
+      0,
+    );
+
+    log("derived.state", {
+      mountId,
+      stats,
+      cgpa,
+      termCount: termResults.length,
+      gradeEntryCount: gradeEntries,
+      terms: termResults.map((t) => ({
+        term: t.term,
+        gpa: Number(t.gpa?.toFixed?.(2) ?? t.gpa),
+        totalCredits: t.totalCredits,
+        entries: t.entries.length,
+      })),
+      upcomingQuizCount: upcomingQuizzes.length,
+      liveSessionCount: liveSessions.length,
+      activeMeetsCount: liveSessions.filter((s) => s.isLive).length,
+      assignmentsCount: assignments.length,
+      assignmentsError,
+      emptyStateHints: {
+        noResults:
+          termResults.length === 0
+            ? "student-grades returned no rows for the resolved messengerStudentId"
+            : null,
+        noQuizzes:
+          upcomingQuizzes.length === 0
+            ? "/api/quizzes/?status=active returned nothing or failed"
+            : null,
+        noSessions:
+          liveSessions.length === 0
+            ? "/api/live-sessions/ returned nothing or failed"
+            : null,
+        noEnrollments:
+          stats.enrolled === 0
+            ? "/api/enrollments/?student_id returned no rows with status=approved, or messengerStudentId could not be resolved"
+            : null,
+      },
+      note: "assignments/assignmentsError are declared but never written by loadDashboard, so assignmentsCount is always 0 and assignmentsError is always null.",
+    });
+  }, [
+    stats,
+    cgpa,
+    termResults,
+    upcomingQuizzes,
+    liveSessions,
+    assignments,
+    assignmentsError,
+  ]);
+
   const classroomCourses: any[] = [];
   const classroomStream: any[] = [];
 
@@ -195,9 +425,67 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      warn("auth.no-user-bailout", {
+        mountId,
+        note: "loadDashboard() returned before running, so none of the five loading flags were ever cleared. If loading.all-flags-true also appears, this is why the page is stuck on skeletons.",
+      });
+      return;
+    }
 
     const loadDashboard = async () => {
+      const startedAt = performance.now();
+
+      /**
+       * Replaces the inline `.catch(() => [])` calls. The original swallowed
+       * every failure into an empty array, so a 404 or a CORS block rendered as
+       * a quietly empty dashboard. Failures are now reported and still resolve
+       * to [] so the page keeps degrading the same way.
+       */
+      const fetchList = async (
+        label: string,
+        path: string,
+        fields: string[],
+      ): Promise<unknown[]> => {
+        const callStartedAt = performance.now();
+        log(`${label}.request`, {
+          mountId,
+          path,
+          resolvedUrl: `${MESSAGING_API_BASE_URL}${path}`,
+        });
+        try {
+          const data = await getMessagingBackend<unknown>(path);
+          const elapsedMs = Math.round(performance.now() - callStartedAt);
+          if (!Array.isArray(data)) {
+            error(`${label}.not-an-array`, {
+              mountId,
+              path,
+              elapsedMs,
+              receivedType: data === null ? "null" : typeof data,
+            });
+            return [];
+          }
+          log(`${label}.response`, {
+            mountId,
+            path,
+            elapsedMs,
+            total: data.length,
+          });
+          inspectRows(label, data, fields);
+          return data;
+        } catch (err) {
+          const elapsedMs = Math.round(performance.now() - callStartedAt);
+          error(`${label}.failed-and-swallowed`, {
+            mountId,
+            path,
+            elapsedMs,
+            ...describeError(err),
+            note: "This request previously used .catch(() => []), so the failure was invisible and the list just rendered empty.",
+          });
+          return [];
+        }
+      };
+
       try {
         setLoadingStats(true);
         setResultsLoading(true);
@@ -205,45 +493,135 @@ export default function Dashboard() {
         setLiveSessionsLoading(true);
         setQuizzesLoading(true);
 
+        log("loadDashboard.start", {
+          mountId,
+          userUid: user.uid,
+          userEmail: user.email ?? null,
+        });
+
         // Resolve the 8084 student id from the logged-in email.
         // user.uid is a NAP user id, not the Lecturer-Backend student id.
         let messengerStudentId: string | null = null;
         try {
+          const profilesStartedAt = performance.now();
           const profiles = await getMessagingBackend<any[]>("/api/profiles/");
-          const match = (Array.isArray(profiles) ? profiles : []).find(
+          const profilesElapsedMs = Math.round(
+            performance.now() - profilesStartedAt,
+          );
+          const profileList = Array.isArray(profiles) ? profiles : [];
+          log("fetch.profiles.response", {
+            mountId,
+            elapsedMs: profilesElapsedMs,
+            total: profileList.length,
+            lookingForEmail: user.email ?? null,
+          });
+          inspectRows("fetch.profiles", profileList, ["id", "email"]);
+          const match = profileList.find(
             (p: any) =>
               p.email &&
               String(p.email).toLowerCase() ===
                 String(user.email || "").toLowerCase(),
           );
-          if (match?.id != null) messengerStudentId = String(match.id);
-        } catch {
-          // Profile lookup unavailable
+          if (match?.id != null) {
+            messengerStudentId = String(match.id);
+            log("messengerStudentId.resolved", {
+              mountId,
+              messengerStudentId,
+              matchedEmail: match.email,
+            });
+          } else {
+            warn("messengerStudentId.unresolved", {
+              mountId,
+              lookingForEmail: user.email ?? null,
+              availableEmails: profileList
+                .slice(0, 10)
+                .map((p: any) => p.email),
+              consequence:
+                "/api/student-grades is skipped entirely and the results/term section stays empty. user.uid is a NAP id, not a Lecturer-Backend student id, so it cannot be substituted.",
+            });
+          }
+        } catch (err) {
+          error("fetch.profiles.failed-and-swallowed", {
+            mountId,
+            ...describeError(err),
+            consequence:
+              "messengerStudentId stays null, so /api/student-grades is never requested and the results section stays empty.",
+          });
         }
 
         // Course units for course names / codes / credits
         const courseUnitsMap: Record<string, any> = {};
         try {
+          const unitsStartedAt = performance.now();
           const units = await getMessagingBackend<any[]>("/api/course-units/");
-          (Array.isArray(units) ? units : []).forEach((u: any) => {
+          const unitsElapsedMs = Math.round(
+            performance.now() - unitsStartedAt,
+          );
+          const unitList: Record<string, unknown>[] = Array.isArray(units)
+            ? units
+            : [];
+          unitList.forEach((u: any) => {
             if (u.id != null) courseUnitsMap[String(u.id)] = u;
           });
-        } catch {
-          // Course units unavailable
+          log("fetch.course-units.response", {
+            mountId,
+            elapsedMs: unitsElapsedMs,
+            total: unitList.length,
+            indexed: Object.keys(courseUnitsMap).length,
+          });
+          inspectRows("fetch.course-units", unitList, [
+            "id",
+            "name",
+            "code",
+            "credits",
+          ]);
+        } catch (err) {
+          error("fetch.course-units.failed-and-swallowed", {
+            mountId,
+            ...describeError(err),
+            consequence:
+              "Course titles, codes and credits fall back to g.course_title / g.course_code / a default of 3 credits.",
+          });
+        }
+
+        if (!messengerStudentId) {
+          warn("fetch.grades.will-skip", {
+            mountId,
+            reason:
+              "messengerStudentId could not be resolved, so no student_id is sent and the grades request is not made at all.",
+            userUid: user.uid,
+          });
         }
 
         // Fetch grades, quizzes, quiz attempts, live sessions in parallel
         const [gradesData, quizzesData, attemptsData, sessionsData, enrollmentsData] =
           await Promise.all([
             messengerStudentId
-              ? getMessagingBackend<any[]>(
+              ? fetchList(
+                  "fetch.grades",
                   `/api/student-grades/?student_id=${messengerStudentId}`,
-                ).catch(() => [])
+                  ["id", "course_id", "total", "gp", "grade"],
+                )
               : Promise.resolve([]),
-            getMessagingBackend<any[]>("/api/quizzes/?status=active").catch(() => []),
-            getMessagingBackend<any[]>(`/api/quiz-attempts/?student_id=${messengerStudentId ?? user.uid}`).catch(() => []),
-            getMessagingBackend<any[]>("/api/live-sessions/").catch(() => []),
-            getMessagingBackend<any[]>(`/api/enrollments/?student_id=${user.uid}`).catch(() => []),
+            fetchList("fetch.quizzes", "/api/quizzes/?status=active", [
+              "id",
+              "title",
+              "status",
+            ]),
+            fetchList(
+              "fetch.quiz-attempts",
+              `/api/quiz-attempts/?student_id=${messengerStudentId ?? user.uid}`,
+              ["id"],
+            ),
+            fetchList("fetch.live-sessions", "/api/live-sessions/", [
+              "id",
+              "title",
+              "scheduled_at",
+            ]),
+            fetchList("fetch.enrollments", `/api/enrollments/?student_id=${user.uid}`, [
+              "id",
+              "status",
+            ]),
           ]);
 
         // Build term results from student grades
@@ -304,6 +682,36 @@ export default function Dashboard() {
         const approvedEnrollments = (Array.isArray(enrollmentsData) ? enrollmentsData : []).filter(
           (e: any) => e.status === "approved",
         );
+
+        log("compute.results", {
+          mountId,
+          gradeRows: gradeList.length,
+          termCount: terms.length,
+          totalCreditsAll,
+          totalGPAll,
+          cgpa: Number(cgpa.toFixed(3)),
+          remarks: terms.map((t) => ({ term: t.term, remark: t.remark })),
+        });
+
+        const enrollmentList: Record<string, unknown>[] = Array.isArray(
+          enrollmentsData,
+        )
+          ? enrollmentsData
+          : [];
+        log("compute.enrollments", {
+          mountId,
+          total: enrollmentList.length,
+          approved: approvedEnrollments.length,
+          statuses: enrollmentList.map((e) => String(e.status)),
+          note: "Only status === 'approved' counts toward the enrolled stat.",
+        });
+
+        warn("compute.quiz-attempts-discarded", {
+          mountId,
+          rows: Array.isArray(attemptsData) ? attemptsData.length : 0,
+          note: "/api/quiz-attempts is fetched but attemptsData is never read anywhere in this component, so the request is wasted on every load.",
+        });
+
         setStats({
           enrolled: approvedEnrollments.length,
           completed: 0,
@@ -328,9 +736,28 @@ export default function Dashboard() {
 
         // Build scheduled Google Meet classes
         const now = new Date();
-        const sessionList: LiveSession[] = (
-          Array.isArray(sessionsData) ? sessionsData : []
+        const sessionSource: Record<string, unknown>[] = Array.isArray(
+          sessionsData,
         )
+          ? sessionsData
+          : [];
+        const unparseableSessions = sessionSource.filter((s) =>
+          Number.isNaN(new Date(String(s?.scheduled_at ?? "")).getTime()),
+        );
+        if (unparseableSessions.length) {
+          warn("compute.sessions.invalid-scheduled-at", {
+            mountId,
+            count: unparseableSessions.length,
+            sample: unparseableSessions.slice(0, 5).map((s) => ({
+              id: s?.id,
+              scheduled_at: s?.scheduled_at,
+            })),
+            consequence:
+              "These sessions can never be marked isLive and sort unpredictably.",
+          });
+        }
+
+        const sessionList: LiveSession[] = sessionSource
           .map((s: any) => {
             const start = new Date(s.scheduled_at);
             const duration = (s.duration_minutes ?? 60) * 60000;
@@ -353,18 +780,46 @@ export default function Dashboard() {
               new Date(b.scheduledAt).getTime(),
           );
         setLiveSessions(sessionList);
+
+        const liveCount = sessionList.filter((s) => s.isLive).length;
+        log("compute.sessions", {
+          mountId,
+          total: sessionList.length,
+          liveNow: liveCount,
+          withMeetLink: sessionList.filter((s) => s.meetLink).length,
+          missingMeetLink: sessionList.filter((s) => !s.meetLink).length,
+          upcoming: sessionList
+            .filter((s) => new Date(s.scheduledAt).getTime() > now.getTime())
+            .slice(0, 5)
+            .map((s) => ({ id: s.id, title: s.title, scheduledAt: s.scheduledAt })),
+        });
+
         setStats((prev) => ({
           ...prev,
-          liveMeets: sessionList.filter((s) => s.isLive).length,
+          liveMeets: liveCount,
         }));
-      } catch {
-        // Dashboard gracefully degrades — show empty state
+
+        log("loadDashboard.complete", {
+          mountId,
+          elapsedMs: Math.round(performance.now() - startedAt),
+        });
+      } catch (err) {
+        error("loadDashboard.failed", {
+          mountId,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          ...describeError(err),
+          note: "The original catch block was empty, so any failure in the build/derive phase left the dashboard silently half-populated with no error surfaced.",
+        });
       } finally {
         setLoadingStats(false);
         setResultsLoading(false);
         setAssignmentsLoading(false);
         setLiveSessionsLoading(false);
         setQuizzesLoading(false);
+        log("loadDashboard.loading-cleared", {
+          mountId,
+          elapsedMs: Math.round(performance.now() - startedAt),
+        });
       }
     };
 
@@ -405,7 +860,15 @@ export default function Dashboard() {
   );
 
   const handleOpenMeet = (link?: string | null) => {
-    if (link) window.open(link, "_blank");
+    if (link) {
+      log("meet.open", { mountId, link });
+      window.open(link, "_blank");
+    } else {
+      warn("meet.open-skipped-no-link", {
+        mountId,
+        note: "The session has no meet_link, so the button is present but does nothing.",
+      });
+    }
   };
 
   return (
@@ -652,7 +1115,15 @@ export default function Dashboard() {
                 </h2>
               </div>
               <button
-                onClick={() => setShowClassDialog(true)}
+                onClick={() => {
+                  log("classroom.dialog.open-requested", {
+                    mountId,
+                    classroomCourses: classroomCourses.length,
+                    classroomStream: classroomStream.length,
+                    note: "classroomCourses and classroomStream are hardcoded empty arrays in this component, so this dialog has no data to render.",
+                  });
+                  setShowClassDialog(true);
+                }}
                 className="flex items-center gap-2 text-xs sm:text-sm text-secondary hover:text-secondary/80 transition-colors cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
@@ -1050,7 +1521,17 @@ export default function Dashboard() {
       </main>
 
       {/* Join Class Dialog */}
-      <Dialog open={showClassDialog} onOpenChange={setShowClassDialog}>
+      <Dialog
+        open={showClassDialog}
+        onOpenChange={(open) => {
+          log("classroom.dialog.state-change", {
+            mountId,
+            open,
+            trigger: open ? "opened" : "dismissed",
+          });
+          setShowClassDialog(open);
+        }}
+      >
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>Join a Class</DialogTitle>

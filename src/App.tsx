@@ -23,6 +23,7 @@ import StudentQuiz from "./pages/StudentQuiz";
 import StudentCourses from "./pages/StudentCourses";
 import CourseContent from "./pages/CourseContent";
 import Announcements from "./pages/Announcements";
+import SmartStudyPlan from "./pages/SmartStudyPlan";
 
 import NotFound from "./pages/NotFound";
 import IdCard from "./pages/IdCard";
@@ -114,6 +115,14 @@ function AppRoutes() {
         element={
           <StudentRoute>
             <Dashboard />
+          </StudentRoute>
+        }
+      />
+      <Route
+        path="/study-plan"
+        element={
+          <StudentRoute>
+            <SmartStudyPlan />
           </StudentRoute>
         }
       />

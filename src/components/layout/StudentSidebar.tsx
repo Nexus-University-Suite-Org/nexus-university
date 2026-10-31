@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   Layers,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +26,8 @@ interface StudentSidebarProps {
 
 const studentNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: Zap },
-{ label: "Courses", href: "/courses", icon: Layers },
+  { label: "Courses", href: "/courses", icon: Layers },
+  { label: "Smart Study Plan", href: "/study-plan", icon: Brain },
   { label: "Calendar", href: "/academic-calendar", icon: Calendar },
   { label: "Announcements", href: "/announcements", icon: Megaphone },
   { label: "Assignments", href: "/assignments", icon: Clipboard },
