@@ -8,7 +8,7 @@ const PROFILE_KEY = "nexus-auth-profile";
 const SSO_SESSION_MARKER = "nexus-sso-session";
 const ADMISSIONS_API =
   import.meta.env.VITE_ADMISSIONS_API_BASE_URL ??
-  "https://backend-production-b8c2b.up.railway.app";
+  "http://localhost:8080";
 
 function appRole(roles: string[]): "student" | "lecturer" | "registrar" | null {
   const normalized = roles.map((role) => role.toUpperCase());
