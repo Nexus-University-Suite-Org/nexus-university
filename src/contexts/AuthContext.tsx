@@ -14,6 +14,22 @@ const ADMISSIONS_API_BASE_URL =
 const SPRING_API_URL =
   import.meta.env.VITE_SPRING_API_URL || "http://localhost:8082";
 const AUTH_TOKEN_STORAGE_KEY = "nexus-auth-token";
+const SSO_SESSION_MARKER = "nexus-sso-session";
+let identityAccessToken: string | null = null;
+
+export function setIdentityAccessToken(token: string | null) {
+  identityAccessToken = token;
+}
+
+export function getIdentityAccessToken(): string | null {
+  const storedToken = getToken();
+  if (storedToken === SSO_SESSION_MARKER) return identityAccessToken;
+  return identityAccessToken ?? storedToken;
+}
+
+export function isIdentitySession(): boolean {
+  return getToken() === SSO_SESSION_MARKER;
+}
 
 interface User {
   uid: string;
@@ -74,11 +90,13 @@ function getToken(): string | null {
 
 function saveToken(token: string) {
   if (typeof window === "undefined") return;
+  identityAccessToken = null;
   window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
 }
 
 function clearToken() {
   if (typeof window === "undefined") return;
+  identityAccessToken = null;
   window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
 }
 
@@ -139,9 +157,18 @@ async function requestJson<T>(
     "Content-Type": "application/json",
   };
 
-  const token = getToken();
+  const token = getIdentityAccessToken();
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  if (token && isIdentitySession()) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  if (token) {
+    headers["Authorization"] =
+      `${isIdentitySession() ? "Bearer" : "Token"} ${token}`;
   }
 
   const response = await fetch(`${ADMISSIONS_API_BASE_URL}${path}`, {
@@ -382,6 +409,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // The admissions backend issues stateless JWTs and exposes no logout route, so
   // signing out is purely a local concern: drop the token and cached session.
   const signOut = async () => {
+    if (isIdentitySession()) {
+      window.dispatchEvent(new Event("nexus-sso-signout"));
+    }
     clearToken();
     clearSession();
     setUser(null);

@@ -4,6 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import {
+  AuthProvider as NexusAuthProvider,
+  useNexusAuth,
+} from "@/lib/nexus-auth";
+import { IdentitySessionBridge } from "@/lib/nexus-auth/IdentitySessionBridge";
 import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
@@ -39,11 +44,23 @@ import RegistrarCalendar from "./pages/RegistrarCalendar";
 import RegistrarReports from "./pages/RegistrarReports";
 
 const queryClient = new QueryClient();
+const IDENTITY_ISSUER =
+  import.meta.env.VITE_IDENTITY_ISSUER ?? "http://localhost:9000";
+
+function isIdentitySessionPending(status: string) {
+  const isSsoSession =
+    localStorage.getItem("nexus-auth-token") === "nexus-sso-session";
+  return (
+    (status === "authenticated" && !isSsoSession) ||
+    (isSsoSession && status !== "authenticated")
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const { status: identityStatus } = useNexusAuth();
 
-  if (loading) {
+  if (loading || isIdentitySessionPending(identityStatus)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="h-8 w-8 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
@@ -60,8 +77,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function StudentRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
+  const { status: identityStatus } = useNexusAuth();
 
-  if (loading) {
+  if (loading || isIdentitySessionPending(identityStatus)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="h-8 w-8 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
@@ -83,8 +101,9 @@ function StudentRoute({ children }: { children: React.ReactNode }) {
 
 function RegistrarRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
+  const { status: identityStatus } = useNexusAuth();
 
-  if (loading) {
+  if (loading || isIdentitySessionPending(identityStatus)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="h-8 w-8 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
@@ -109,6 +128,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/auth/callback" element={<Auth />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
         path="/dashboard"
@@ -366,11 +386,26 @@ const App = () => (
           v7_relativeSplatPath: true,
         }}
       >
-        <AuthProvider>
-          <SiteSettingsProvider>
-            <AppRoutes />
-          </SiteSettingsProvider>
-        </AuthProvider>
+        <NexusAuthProvider
+          config={{
+            issuer: IDENTITY_ISSUER,
+            clientId: "nexus-student-portal",
+            redirectPath: "/auth/callback",
+            defaultReturnTo: "/dashboard",
+          }}
+            fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                Checking your sign-in...
+              </div>
+            }
+          >
+          <IdentitySessionBridge />
+          <AuthProvider>
+            <SiteSettingsProvider>
+              <AppRoutes />
+            </SiteSettingsProvider>
+          </AuthProvider>
+        </NexusAuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

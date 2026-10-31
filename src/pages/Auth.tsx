@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNexusAuth } from "@/lib/nexus-auth";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 export default function Auth() {
@@ -28,9 +29,23 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
 
   const { signIn } = useAuth();
+  const { login: loginWithSso } = useNexusAuth();
   const { settings } = useSiteSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleSsoError = (event: Event) => {
+      const message = (event as CustomEvent<string>).detail;
+      toast({
+        title: "Single sign-on failed",
+        description: message,
+        variant: "destructive",
+      });
+    };
+    window.addEventListener("nexus-sso-error", handleSsoError);
+    return () => window.removeEventListener("nexus-sso-error", handleSsoError);
+  }, [toast]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,6 +325,14 @@ export default function Auth() {
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-14 text-base font-semibold rounded-2xl"
+              onClick={() => void loginWithSso("/dashboard")}
+            >
+              Sign in with University SSO
             </Button>
           </form>
         </motion.div>

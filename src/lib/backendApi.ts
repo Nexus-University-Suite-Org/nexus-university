@@ -1,3 +1,5 @@
+import { getIdentityAccessToken, isIdentitySession } from "@/contexts/AuthContext";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -17,16 +19,10 @@ const REG_API_BASE_URL =
 
 export { MESSAGING_API_BASE_URL, NAD_API_BASE_URL, REG_API_BASE_URL };
 
-const AUTH_TOKEN_KEY = "nexus-auth-token";
-
-function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(AUTH_TOKEN_KEY);
-}
-
 function authHeaders(): Record<string, string> {
-  const token = getToken();
-  return token ? { Authorization: `Token ${token}` } : {};
+  const token = getIdentityAccessToken();
+  const scheme = isIdentitySession() ? "Bearer" : "Token";
+  return token ? { Authorization: `${scheme} ${token}` } : {};
 }
 
 const API_LOG_TAG = "[API]";
